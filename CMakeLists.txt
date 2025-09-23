@@ -9,7 +9,7 @@ project(RTech
         LANGUAGES C)
 
 set(CMAKE_C_STANDARD 23)
-#set(CMAKE_C_STANDARD_REQUIRED True)
+set(CMAKE_C_STANDARD_REQUIRED True)
 
 add_executable(${PROJECT_NAME})
 

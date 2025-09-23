@@ -1,10 +1,13 @@
 #include "windowing/rtenginewindow.h"
+#include <Windows.h>
 #include <stdlib.h>
 #include <string.h>
 
 struct rtEngineWindow{
         char* windowTitle;
         size_t windowTitleLength;
+
+        bool isActive;
 };
 
 struct rtEngineWindow* rtEW_createWindow(const char* windowTitle) {
@@ -24,6 +27,7 @@ struct rtEngineWindow* rtEW_createWindow(const char* windowTitle) {
         }
 
         window->windowTitleLength = titleLen;
+        window->isActive = false;
 
         memcpy(window->windowTitle, windowTitle, titleLen);
         return window;
@@ -39,5 +43,9 @@ void rtEW_cleanupWindow(struct rtEngineWindow* window) {
 
         free(window->windowTitle);
         free(window);
+}
+
+inline bool rtEw_windowIsActive(const struct rtEngineWindow* window) {
+        return window->isActive;
 }
 
