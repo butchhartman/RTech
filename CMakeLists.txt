@@ -18,4 +18,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE src)
 add_subdirectory(src)
 
 target_compile_options(${PROJECT_NAME} PRIVATE
-        $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -g --debug>)
+        $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -gdwarf -g -g3 -O0>)
+
+if (WIN32)
+        # adds compiler options to remove the console on windows. the LINKER: prefix makes it portable across compilers
+        target_link_options(${PROJECT_NAME} PRIVATE LINKER:/SUBSYSTEM:WINDOWS,/ENTRY:mainCRTStartup)
+endif()
+
+
