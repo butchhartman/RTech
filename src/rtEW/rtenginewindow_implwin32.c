@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <Windows.h>
-#include "windowing/rtenginewindow.h"
+#include "rtEW/rtenginewindow.h"
 
 #define RTEW_WINDOW_CLASS_NAME L"RTEW_WindowClass"
 
