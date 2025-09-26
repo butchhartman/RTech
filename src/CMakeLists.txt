@@ -1,3 +1,6 @@
-target_sources(${PROJECT_NAME} PRIVATE main.c)
+if (NOT DEFINED RTECH_ONLY_TEST_SOURCES)
+        target_sources(${PROJECT_NAME} PRIVATE main.c)
+endif()
 
 add_subdirectory(rtEW)
+

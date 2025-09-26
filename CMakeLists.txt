@@ -3,6 +3,8 @@
 
 cmake_minimum_required(VERSION 4.1.1)
 
+option(BUILD_TESTS "Build all test suites" OFF)
+
 project(RTech
         VERSION 1.0.0
         DESCRIPTION "A 3D voxel game about technological progression"
@@ -26,3 +28,6 @@ if (WIN32)
 endif()
 
 
+if (BUILD_TESTS)
+        add_subdirectory(test)
+endif()
