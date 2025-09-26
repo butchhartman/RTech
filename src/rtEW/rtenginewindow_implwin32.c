@@ -1,5 +1,6 @@
 #ifndef UNICODE
         #define UNICODE
+#include "rtELog/rtELog.h"
 #endif
 
 #include <wchar.h>
@@ -86,7 +87,9 @@ struct rtEngineWindow* rtEW_createWindow(const char* windowTitle) {
         );
 
         // Waits for the dispatched worker thread to finish window creation and signal the semaphore
+        rtELog_log("Waiting for window creation...");
         WaitForSingleObject(windowThread_workerAndSemaphore.semaphore, INFINITE);
+        rtELog_log("Window creation semaphore signaled");
 
         // TODO: This function can fail, consider error checking in some form
         CloseHandle(windowThread_workerAndSemaphore.semaphore);
@@ -139,20 +142,24 @@ DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore) {
                 NULL);
 
         // Notifies main thread that it can stop waiting and return the create window function.
+        rtELog_log("Win32 resource creation completed; releasing semaphore");
         ReleaseSemaphore(semaphore, 1, NULL);
         // Semaphore is void after this line
         // The semaphore AND window struct is also void after this line (heap dealloc)
 
+        rtELog_log("Beginning asynchronous message loop");
         MSG msg = { };
         while (GetMessage(&msg, NULL, 0, 0) > 0) {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
         }
         
+        rtELog_log("Message loop terminated, signaling window to close");
         WaitForSingleObject(windowPtr->shouldCloseMutex, INFINITE);
         windowPtr->shouldClose = true;
         ReleaseMutex(windowPtr->shouldCloseMutex);
 
+        rtELog_log("Win32 worker thread exiting");
         ExitThread(0);
 
         return 0;
@@ -174,8 +181,10 @@ void rtEW_cleanupWindow(struct rtEngineWindow* window) {
         if (window->windowTitle == NULL) {
                 return;
         }
-
+        
+        rtELog_log("Waiting for win32 worker thread to exit");
         WaitForSingleObject(window->msgLoopThread, INFINITE);
+        rtELog_log("Win32 worker thread exited; freeing resources");
         DestroyWindow(window->windowHandle);
         CloseHandle(window->msgLoopThread);
         CloseHandle(window->shouldCloseMutex);

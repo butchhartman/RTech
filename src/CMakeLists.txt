@@ -3,4 +3,5 @@ if (NOT DEFINED RTECH_ONLY_TEST_SOURCES)
 endif()
 
 add_subdirectory(rtEW)
+add_subdirectory(rtELog)
 
