@@ -10,6 +10,7 @@
 #include "rtEW/rtenginewindow.h"
 
 #define RTEW_WINDOW_CLASS_NAME L"RTEW_WindowClass"
+// TODO: Add error checking for Mutex functions
 
 struct rtEngineWindow{
         char* windowTitle;
@@ -20,6 +21,7 @@ struct rtEngineWindow{
         // win32
         HWND windowHandle;
         HANDLE msgLoopThread;
+        HANDLE shouldCloseMutex;
 };
 
 struct windowAndSemaphore{
@@ -131,6 +133,11 @@ DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore) {
                 return 1;
         }
 
+        windowPtr->shouldCloseMutex = CreateMutex(
+                NULL,
+                FALSE,
+                NULL);
+
         // Notifies main thread that it can stop waiting and return the create window function.
         ReleaseSemaphore(semaphore, 1, NULL);
         // Semaphore is void after this line
@@ -141,8 +148,12 @@ DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore) {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
         }
-
+        
+        WaitForSingleObject(windowPtr->shouldCloseMutex, INFINITE);
         windowPtr->shouldClose = true;
+        ReleaseMutex(windowPtr->shouldCloseMutex);
+
+        ExitThread(0);
 
         return 0;
 }
@@ -164,17 +175,20 @@ void rtEW_cleanupWindow(struct rtEngineWindow* window) {
                 return;
         }
 
-        TerminateThread(window->msgLoopThread, 0);
         WaitForSingleObject(window->msgLoopThread, INFINITE);
         DestroyWindow(window->windowHandle);
         CloseHandle(window->msgLoopThread);
+        CloseHandle(window->shouldCloseMutex);
 
         free(window->windowTitle);
         free(window);
 }
 
 bool rtEW_windowShouldClose(const struct rtEngineWindow* window) {
-        return window->shouldClose;
+        WaitForSingleObject(window->shouldCloseMutex, INFINITE);
+        bool returnShouldClose = window->shouldClose;
+        ReleaseMutex(window->shouldCloseMutex);
+        return returnShouldClose;
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
