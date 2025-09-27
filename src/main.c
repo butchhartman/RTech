@@ -1,3 +1,4 @@
+#include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtELog/rtELog.h" 
 #include "rtEW/rtenginewindow.h"
 #include <stdlib.h>
@@ -6,18 +7,17 @@
 int main() {
         rtELog_init("RTechLog.log");
 
-        if (!rtEW_init()) {
+        if (rtEW_init() != rtEErrorCode_SUCCESS) {
                 rtELog_logError("rtEW Faild to initialize");
                 return EXIT_FAILURE;
         }
 
-        struct rtEngineWindow* window = rtEW_createWindow("RTech");
-
-        if (window == nullptr) {
-                rtELog_logError("Failed to create engine window");
+        struct rtEngineWindow* window;
+        if (rtEW_createWindow(&window, "rTech") != rtEErrorCode_SUCCESS) {
+                rtELog_logError("Failed to create rtEWindow");
                 return EXIT_FAILURE;
         }
-        
+
         rtEW_showWindow(window);  
 
         rtELog_log("Beginning main loop");
