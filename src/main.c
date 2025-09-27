@@ -1,20 +1,21 @@
 #include "rtELog/rtELog.h" 
 #include "rtEW/rtenginewindow.h"
+#include <stdlib.h>
 
 // TODO: See about getting tests set up
 int main() {
         rtELog_init("RTechLog.log");
 
         if (!rtEW_init()) {
-                rtELog_log("***ERROR: RTEW INITIALIZATION FAILED");
-                return 1;
+                rtELog_logError("rtEW Faild to initialize");
+                return EXIT_FAILURE;
         }
 
         struct rtEngineWindow* window = rtEW_createWindow("RTech");
 
         if (window == nullptr) {
-                rtELog_log("***ERROR: FAILED TO CREATE ENGINE WINDOW");
-                return 1;
+                rtELog_logError("Failed to create engine window");
+                return EXIT_FAILURE;
         }
         
         rtEW_showWindow(window);  

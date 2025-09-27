@@ -1,6 +1,10 @@
 #ifndef RTELOG_H_
 #define RTELOG_H_ 
 
+#define rtELog_logError(msg) rtELog_log("***ERROR:  " msg)
+#define rtELog_logWarning(msg) rtELog_log("**WARNING:  " msg)
+#define rtELog_logInfo(msg) rtELog_log("*INFO:  " msg)
+
 void rtELog_init(const char* logFileName);
 
 void rtELog_log(const char* message);
