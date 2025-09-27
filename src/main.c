@@ -5,7 +5,7 @@
 
 // TODO: See about getting tests set up
 int main() {
-        rtELog_init("RTechLog.log");
+        rtELog_init("RTechLog");
 
         if (rtEW_init() != rtEErrorCode_SUCCESS) {
                 rtELog_logError("rtEW Faild to initialize");
@@ -13,7 +13,7 @@ int main() {
         }
 
         struct rtEngineWindow* window;
-        if (rtEW_createWindow(&window, "rTech") != rtEErrorCode_SUCCESS) {
+        if (rtEW_createWindow(&window, "RTech") != rtEErrorCode_SUCCESS) {
                 rtELog_logError("Failed to create rtEWindow");
                 return EXIT_FAILURE;
         }
