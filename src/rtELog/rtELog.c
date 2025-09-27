@@ -1,10 +1,12 @@
 #include <assert.h>
 #include <math.h>
 #include <rtELog/rtELog.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <vadefs.h>
 
 FILE* mainLogFile;
 clock_t startingTime;
@@ -19,16 +21,20 @@ static double helper_getCurrentTime(int* seconds, int* minutes, int* hours) {
         return currentTime;
 }
 
-static char* helper_createLogMessage(const char* message) {
+static char* helper_createLogMessage(const char* message, va_list args){
         int seconds, minutes, hours;
         helper_getCurrentTime(&seconds, &minutes, &hours);
         // +2 for null terminator & newline
-        int timeStringSize = snprintf(NULL, 0, "[%02d:%02d:%02d] -- ", hours, minutes, seconds) + strlen(message) + 2;
+        int formattedMessageSize = vsnprintf(NULL, 0, message, args) + 1;
+        char* formattedMessage = malloc(sizeof(char) * formattedMessageSize);
+        vsnprintf(formattedMessage, formattedMessageSize, message, args);
+
+        int timeStringSize = snprintf(NULL, 0, "[%02d:%02d:%02d] -- ", hours, minutes, seconds) + strlen(formattedMessage) + 2;
 
         char* messageBuffer = malloc(sizeof(char) * timeStringSize);
         memset(messageBuffer, 0, sizeof(char) * timeStringSize);
         snprintf(messageBuffer, timeStringSize, "[%02d:%02d:%02d] -- ", hours, minutes, seconds); 
-        strcat_s(messageBuffer, timeStringSize, message);
+        strcat_s(messageBuffer, timeStringSize, formattedMessage);
         strcat_s(messageBuffer, timeStringSize, "\n");
 
         return messageBuffer;
@@ -87,8 +93,11 @@ void rtELog_init(const char* logFileName) {
 }
 
 
-void rtELog_log(const char* message) {
-        char* messageBuffer = helper_createLogMessage(message);
+void rtELog_log(const char* message, ...) {
+        va_list args;
+        va_start(args);
+        char* messageBuffer = helper_createLogMessage(message, args) ;
+        va_end(args);
 
         fprintf_s(mainLogFile, messageBuffer);
         fflush(mainLogFile);
