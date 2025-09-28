@@ -37,6 +37,7 @@ static char* helper_createLogMessage(const char* message, va_list args){
         strcat_s(messageBuffer, timeStringSize, formattedMessage);
         strcat_s(messageBuffer, timeStringSize, "\n");
 
+        free(formattedMessage);
         return messageBuffer;
 }
 
