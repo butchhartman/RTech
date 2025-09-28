@@ -94,6 +94,10 @@ void rtELog_init(const char* logFileName) {
 
 
 void rtELog_log(const char* message, ...) {
+        if (mainLogFile == NULL) {
+                return;
+        }
+
         va_list args;
         va_start(args);
         char* messageBuffer = helper_createLogMessage(message, args) ;

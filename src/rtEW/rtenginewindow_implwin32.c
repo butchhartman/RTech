@@ -299,6 +299,7 @@ enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow* window) {
         }
         
         rtELog_log("Waiting for win32 worker thread to exit");
+        CloseHandle(window->msgLoopThread);
         WaitForSingleObject(window->msgLoopThread, INFINITE);
         rtELog_log("Win32 worker thread exited; freeing resources");
         DestroyWindow(window->windowHandle);
