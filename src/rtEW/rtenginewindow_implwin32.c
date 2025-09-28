@@ -222,6 +222,11 @@ enum rtEErrorCode rtEW_init() {
         return err;
 }
 
+enum rtEErrorCode rtEW_cleanup() {
+        int err =UnregisterClass(RTEW_WINDOW_CLASS_NAME, NULL);
+        return (err != 0) ? rtEErrorCode_SUCCESS : rtEErrorCode_MEMORY_ALLOC_FAILURE;
+}
+
 enum rtEErrorCode rtEW_createWindow(struct rtEngineWindow** window, const char* windowTitle) {
 
         enum rtEErrorCode err = initializeWindowMemory(window, windowTitle);
@@ -288,27 +293,30 @@ void rtEW_hideWindow(struct rtEngineWindow* window) {
        ShowWindow(window->windowHandle, SW_HIDE); 
 }
 
-enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow* window) {
-        if (window == NULL) {
+enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow** window) {
+        struct rtEngineWindow* windowPtr = *window;
+
+        if (windowPtr == nullptr) {
                 // TODO: Replace with relevant error code
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
-        if (window->windowTitle == NULL) {
+        if (windowPtr->windowTitle == nullptr) {
                 // TODO: Replace with relevant error code
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
         
         rtELog_log("Waiting for win32 worker thread to exit");
-        CloseHandle(window->msgLoopThread);
-        WaitForSingleObject(window->msgLoopThread, INFINITE);
+        CloseHandle(windowPtr->msgLoopThread);
+        WaitForSingleObject(windowPtr->msgLoopThread, INFINITE);
         rtELog_log("Win32 worker thread exited; freeing resources");
-        DestroyWindow(window->windowHandle);
-        CloseHandle(window->msgLoopThread);
-        CloseHandle(window->shouldCloseMutex);
+        DestroyWindow(windowPtr->windowHandle);
+        CloseHandle(windowPtr->msgLoopThread);
+        CloseHandle(windowPtr->shouldCloseMutex);
 
-        free(window->windowTitle);
-        free(window);
+        free(windowPtr->windowTitle);
+        free(windowPtr);
 
+        *window = nullptr;
         return rtEErrorCode_SUCCESS;
 }
 

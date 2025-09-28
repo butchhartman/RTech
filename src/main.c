@@ -26,7 +26,8 @@ int main() {
         }
 
         rtELog_log("Cleaning up resources");
-        rtEW_cleanupWindow(window);
+        rtEW_cleanupWindow(&window);
+        rtEW_cleanup();
         rtELog_cleanup();
 
         return 0;
