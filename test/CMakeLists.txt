@@ -17,6 +17,8 @@ function(addTestSuite file)
 
         add_subdirectory(${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR}/RTech_Test_Suite_${TEST_SUITE_NAME})
 
+        target_compile_options(${PROJECT_NAME} PRIVATE
+                $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -gdwarf -g -g3 -O0>)
 
 endfunction()
 
