@@ -28,7 +28,7 @@ struct rtEMemoryManager {
 // The buff pointer will always lie on a in-band header. The LSB will be whether the block is free, and the remaining MSBs will be the block size
 
 // DONE BUT LEAVING THIS HERE SO I DONT FORGET I DID IT:
-//DONE: Fix bug where header size is not accounted for when calculating the size of a block and occupied not being set correctly and 
+//DONE: Fix bug where header size is not accounted for when calculating the size of a block (on a stack allocator allocation) and occupied not being set correctly and 
 //HAVENT DONE THIS THOUGH:
 //TODO: Stop headers denoting size 0 from eating space in allocations
 
