@@ -27,6 +27,11 @@ struct rtEMemoryManager {
 // Solution: in-band headers. Each 'block' of memory has a value denoting its size and if it is free or not. I can search through this quickly.
 // The buff pointer will always lie on a in-band header. The LSB will be whether the block is free, and the remaining MSBs will be the block size
 
+// DONE BUT LEAVING THIS HERE SO I DONT FORGET I DID IT:
+//DONE: Fix bug where header size is not accounted for when calculating the size of a block and occupied not being set correctly and 
+//HAVENT DONE THIS THOUGH:
+//TODO: Stop headers denoting size 0 from eating space in allocations
+
 struct rtEMMStackAllocator {
         unsigned char* buff;
         size_t buffSize;
@@ -75,8 +80,9 @@ enum rtEErrorCode rtEMM_cleanupMemoryManager(struct rtEMemoryManager** obj) {
 }
 
 enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager** parent, struct rtEMMStackAllocator** child, size_t buffSize) {
-        size_t buffActualSize = buffSize + sizeof(struct rtEMMStackAllocator) + IN_BAND_HEADER_SIZE;
-        
+        size_t buffActualSize = buffSize + sizeof(struct rtEMMStackAllocator); //+ IN_BAND_HEADER_SIZE;
+        size_t totalBuffSize = buffSize + sizeof(struct rtEMMStackAllocator) + IN_BAND_HEADER_SIZE;
+
         struct rtEMemoryManager* parentAllocator = *parent;
 
         // find empty block
@@ -105,17 +111,17 @@ enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager** parent,
                         memcpy(parentAllocator->buff + deltaM, &buffActualSize, sizeof(uint32_t));
                         *(parentAllocator->buff + (deltaM)+ sizeof(uint32_t)) = 0xFF;
 
-                        uint32_t newSize = blockSize - buffActualSize;
+                        uint32_t newSize = blockSize - buffActualSize - IN_BAND_HEADER_SIZE;
                         //parentAllocator->buff += buffActualSize;
-                        memcpy(parentAllocator->buff + deltaM + buffActualSize, &newSize, sizeof(uint32_t));
-                        *(parentAllocator->buff + sizeof(uint32_t)) = 0x00;
+                        memcpy(parentAllocator->buff + deltaM +totalBuffSize , &newSize, sizeof(uint32_t));
+                        *(parentAllocator->buff +deltaM + totalBuffSize  + sizeof(uint32_t)) = 0x00;
 
                         block += IN_BAND_HEADER_SIZE;
 
                 } else if (blockSize == 0) {
                         return rtEErrorCode_MEMORY_ALLOC_FAILURE;
                 } else {
-                        bufferPtr += blockSize;
+                        bufferPtr += blockSize + IN_BAND_HEADER_SIZE;
                 }
         }
 
@@ -132,8 +138,8 @@ enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager** parent,
 enum rtEErrorCode rtEMM_cleanupStackAllocator(struct rtEMMStackAllocator** alloc) {
         struct rtEMMStackAllocator* stackAlloc = *alloc;
 
-        *(stackAlloc->buff - 1) = 0x00;
-        memset(stackAlloc->buff, 0, stackAlloc->buffSize);
+        *(stackAlloc->buff - 1 - sizeof(struct rtEMMStackAllocator)) = 0x00;
+        memset(stackAlloc->buff - sizeof(struct rtEMMStackAllocator), 0, stackAlloc->buffSize + sizeof(struct rtEMMStackAllocator));
         stackAlloc->buff = nullptr;
         stackAlloc->top = nullptr;
         stackAlloc->manager = nullptr;
