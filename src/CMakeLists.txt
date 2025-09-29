@@ -4,5 +4,5 @@ endif()
 
 add_subdirectory(rtEW)
 add_subdirectory(rtELog)
-add_subdirectory(rtEAlloc)
+add_subdirectory(rtEMemoryManager)
 
