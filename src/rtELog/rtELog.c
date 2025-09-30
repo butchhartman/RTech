@@ -112,5 +112,6 @@ void rtELog_log(const char* message, ...) {
 
 void rtELog_cleanup() {
         fclose(mainLogFile);
+        mainLogFile = nullptr;
 }
 
