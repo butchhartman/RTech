@@ -5,9 +5,9 @@
 * Defines the API for the logging module
 */
 
-#define rtELog_logError(msg, ...) rtELog_log("***ERROR:  " msg, __VA_ARGS__)
-#define rtELog_logWarning(msg, ...) rtELog_log("**WARNING:  " msg, __VA_ARGS__)
-#define rtELog_logInfo(msg, ...) rtELog_log("*INFO:  " msg, __VA_ARGS__)
+#define rtELog_logError(msg, ...) rtELog_log("***DB_ERROR:  " msg, __VA_ARGS__)
+#define rtELog_logWarning(msg, ...) rtELog_log("**DB_WARNING:  " msg, __VA_ARGS__)
+#define rtELog_logInfo(msg, ...) rtELog_log("*DB_INFO:  " msg, __VA_ARGS__)
 
 /**
 * Initializes the global state of the rtELogger. This must happen before any logging functions are called. All subsequent logging calls will
