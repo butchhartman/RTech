@@ -36,6 +36,7 @@ RTEST_SUITE_BEGIN("rtEMemoryManager Tests") {
 
                 rtEMM_cleanupStackAllocator(&SA);
                 RTEST_ASSERT(SA == nullptr);
+                rtEMM_cleanupMemoryManager(&manager);
         }
 
         RTEST_CASE("Multiple stack allocators can be allocated from a manager") {
@@ -58,19 +59,20 @@ RTEST_SUITE_BEGIN("rtEMemoryManager Tests") {
                 RTEST_ASSERT(SA == nullptr);
                 RTEST_ASSERT(SA1 == nullptr);
                 RTEST_ASSERT(SA2 == nullptr);
-
+                rtEMM_cleanupMemoryManager(&manager);
         }
 
         RTEST_CASE("Stack allocator with exact size of the memory manager") {
                 struct rtEMemoryManager* manager;
                 struct rtEMMStackAllocator* SA;
 
-                rtEMM_createMemoryManager(&manager, 47);
+                rtEMM_createMemoryManager(&manager, 42);
                 RTEST_ASSERT(rtEMM_allocateStackAllocator(&manager, &SA, 10) == rtEErrorCode_SUCCESS);
                 RTEST_ASSERT(SA != nullptr);
 
                 rtEMM_cleanupStackAllocator(&SA);
                 RTEST_ASSERT(SA == nullptr);
+                rtEMM_cleanupMemoryManager(&manager);
         }
 
         RTEST_CASE("Stack allocator can be allocated to a recently freed block") {
@@ -91,7 +93,7 @@ RTEST_SUITE_BEGIN("rtEMemoryManager Tests") {
                 rtEMM_cleanupStackAllocator(&SA1);
                 RTEST_ASSERT(SA1 == nullptr);
                 
-
+                rtEMM_cleanupMemoryManager(&manager);
         }
 
         RTEST_CASE("Memory can be allocated to and freed from a stack allocator") {
@@ -115,5 +117,6 @@ RTEST_SUITE_BEGIN("rtEMemoryManager Tests") {
 
                 RTEST_ASSERT(rtEMM_stackFreeTo(SA, &arrayOfTenInts) == rtEErrorCode_SUCCESS);
                 RTEST_ASSERT(arrayOfTenInts == nullptr);
+                rtEMM_cleanupMemoryManager(&manager);
         }
 }

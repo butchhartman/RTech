@@ -111,10 +111,15 @@ enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager** parent,
                         memcpy(parentAllocator->buff + deltaM, &buffActualSize, sizeof(uint32_t));
                         *(parentAllocator->buff + (deltaM)+ sizeof(uint32_t)) = 0xFF;
 
-                        uint32_t newSize = blockSize - buffActualSize - IN_BAND_HEADER_SIZE;
-                        //parentAllocator->buff += buffActualSize;
-                        memcpy(parentAllocator->buff + deltaM +totalBuffSize , &newSize, sizeof(uint32_t));
-                        *(parentAllocator->buff +deltaM + totalBuffSize  + sizeof(uint32_t)) = 0x00;
+                        uint32_t newSize = blockSize - buffActualSize; 
+                        printf("ns: %u\n", newSize);
+                        if (newSize != 0) {
+                                //parentAllocator->buff += buffActualSize;
+                                memcpy(parentAllocator->buff + deltaM +totalBuffSize , &newSize, sizeof(uint32_t));
+                                *(parentAllocator->buff +deltaM + totalBuffSize  + sizeof(uint32_t)) = 0x00;
+                        } else {
+                                printf("No space for header, did not create\n");
+                        }
 
                         block += IN_BAND_HEADER_SIZE;
 

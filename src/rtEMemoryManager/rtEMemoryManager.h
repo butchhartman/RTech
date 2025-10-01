@@ -22,9 +22,6 @@ struct rtEMMStackAllocator;
 * @note There is some memory overhead to the allocation so more than buffSize bytes will
 * be allocated but buffSize bytes are guaranteed to be available
 *
-* @bug If an allocation fully consumes the available buffer, the next in-band header write will 
-* cause a buffer overrun
-*
 * @todo Write more tests, IDK if this is stable enough to use right now
 *
 * @param obj - The address of the memory manager to allocate
