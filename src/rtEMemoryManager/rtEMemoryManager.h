@@ -11,6 +11,7 @@
 
 // TODO: Expand documentation from these quick and dirty descriptions
 // TODO: Fix looking at the implementation making me sad
+// TODO: Separate the header and source files of the memory manager and allocators
 
 struct rtEMemoryManager;
 struct rtEMMStackAllocator;
