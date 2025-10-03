@@ -2,6 +2,7 @@
 #include <rtEMemoryManager/structs/rtEStackAllocatorStruct.h>
 #include <rtEMemoryManager/procs/rtEMemoryManagerHelperProcs.h>
 #include <stdio.h>
+#include <string.h>
 
 enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager* parent, struct rtEMMStackAllocator** child, size_t buffSize) {
         size_t buffActualSize = buffSize + sizeof(struct rtEMMStackAllocator); //+ IN_BAND_HEADER_SIZE;

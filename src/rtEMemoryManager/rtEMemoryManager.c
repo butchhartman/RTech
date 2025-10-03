@@ -1,5 +1,4 @@
 #include "rtEErrorCodes/rtEErrorCodes.h"
-#include "rtELog/rtELog.h"
 #include <rtEMemoryManager/rtEMemoryManager.h>
 #include <stdint.h>
 #include <stdio.h>
