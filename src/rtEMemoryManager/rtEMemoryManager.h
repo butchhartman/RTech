@@ -5,8 +5,7 @@
 #include <stdint.h>
 
 /**
-* @file 
-* The public api for the RTech memory manager
+* @file
 */
 
 // TODO: Expand documentation from these quick and dirty descriptions

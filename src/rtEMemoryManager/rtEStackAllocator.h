@@ -3,6 +3,10 @@
 #include <rtEErrorCodes/rtEErrorCodes.h>
 #include <stdint.h>
 
+/**
+* @file
+*/
+
 // forward dec
 struct rtEMemoryManager;
 
@@ -10,6 +14,9 @@ struct rtEMMStackAllocator;
 
 /**
 * Allocates a stack allocator using the memory contained within a @ref rtEMemoryManager
+*
+* @todo
+* Fix implementation only allowing 2^32 - 1 bytes to be allocated
 *
 * @note
 * The internal buffer of the stack allocator is guaranteed to be buffSize bytes large,
@@ -28,6 +35,24 @@ enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager* parent, 
 */
 enum rtEErrorCode rtEMM_cleanupStackAllocator(struct rtEMMStackAllocator** alloc);
 
+/**
+* Assigns dest a pointer to a free memory block of size bytes in alloc
+*
+* @param alloc - A @ref rtEMMStackAllocator too allocate from
+* @param size - The size in bytes to allocate to dest
+* @param dest - The address of the pointer to recieve the memory block
+*/
 enum rtEErrorCode rtEMM_stackMalloc(struct rtEMMStackAllocator* alloc, uint32_t size, void** dest);
+/**
+* Moves the stack pointer to ptr, effectively de-allocating all pointers up to and including ptr
+*
+* @warning 
+* Passing a pointer not allocated from alloc is undefined behavior. 
+* Attempting to use a freed pointer is undefined behavior. One must keep track of their allocation
+* order.
+*
+* @param alloc - The rtEMMStackAllocator that ptr belongs to
+* @param ptr - The address of the pointer to free to. ptr is additionally set to nullptr
+*/
 enum rtEErrorCode rtEMM_stackFreeTo(struct rtEMMStackAllocator* alloc, void** ptr);
 #endif // RTESTACKALLOCATOR_H_

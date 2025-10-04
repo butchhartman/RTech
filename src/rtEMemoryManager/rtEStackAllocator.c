@@ -6,7 +6,6 @@
 
 enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager* parent, struct rtEMMStackAllocator** child, size_t buffSize) {
         size_t buffActualSize = buffSize + sizeof(struct rtEMMStackAllocator); //+ IN_BAND_HEADER_SIZE;
-
         // find empty block
         unsigned char* block = nullptr;
 

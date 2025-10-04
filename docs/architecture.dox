@@ -1,0 +1,27 @@
+/** @page Architecture Software Architecture Index
+This page serves as an index to the architecture documents of the RTech modules which contain
+them.
+
+- @subpage rtEMMArch
+*/
+
+/** @page rtEMMArch Memory Manager Architecture
+@tableofcontents
+
+@section overview Overview
+The @ref src/rtEMemoryManager directory contains the following contents:
+- @ref src/rtEMemoryManager/macros/rtEMMMacros.h
+- @ref src/rtEMemoryManager/procs/rtEMemoryManagerHelperProcs.h
+- @ref src/rtEMemoryManager/structs/rtEMemoryManagerStruct.h
+- @ref src/rtEMemoryManager/structs/rtEStackAllocatorStruct.h
+- @ref src/rtEMemoryManager/rtEMemoryManager.h
+- @ref src/rtEMemoryManager/rtEStackAllocator.h
+
+@section architecture Architecture
+@paragraph api API
+The API of the rtEMM module is exposed through the @ref rtEStackAllocator.h and @ref rtEMemoryManager.h headers. This exposes their respective memory objects and its related functions.
+
+@paragraph separation Header Separation 
+@ref rtEMMMacros.h, @ref rtEMemoryManagerHelperProcs.h, and the alloctor struct definition headers within @ref src/rtEMemoryManager/structs are kept separate so they can be used independantly by and current and future rtEMM functions. The macros and helper procs are only relevant to implementation files, so only those files should include them. This prevents any edit to those headers from forcing a repo-wide recompile. The struct definitions are also only relevant to implementation files, as the structs are only exposed as opaque handles.
+
+*/
