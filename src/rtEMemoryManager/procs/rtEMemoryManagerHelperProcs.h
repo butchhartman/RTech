@@ -2,6 +2,9 @@
 #define RTEMEMORYMANAGERHELPERPROCS_H_
 #include "rtEMemoryManager/rtEMemoryManager.h"
 #include <rtEErrorCodes/rtEErrorCodes.h>
+/**
+* @file
+*/
 
 /**
 * Finds a block of memory in manager which is blockSize + allocatorSize bytes large 

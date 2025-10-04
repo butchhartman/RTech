@@ -5,9 +5,7 @@
 
 /**
 * @file
-*/
-
-/**
+*
 * @note
 * Each test file must have one and only one @ref RTEST_SUITE_BEGIN to work.
 *
