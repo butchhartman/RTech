@@ -1,0 +1,18 @@
+/** @page desphilo Module Design Philosophy Index
+This page serves as a reference to the philosphy behind using certain modules
+
+@tableofcontents
+
+@section naming Naming
+* Module names follow the pattern rtE* (RTechEngine) and its module functions follow the pattern rtE<module name abbrev>_*
+
+@section rtEErrorPhilo rtEErrorCodes
+The rtEError codes are intended to monopolize the return values of all module functions. This allows me to pick and choose when to ignore or handle any error.
+
+@section logs Logging
+Debug log macros are intended to be placed wherever it would be beneficial to log debug information. These logs will be automatically removed
+when compiled for release, so there is no penalty for doing this.
+Normal log macros should only really be used for reporting errors or potential errors.
+*/
+
+
