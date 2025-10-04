@@ -1,6 +1,7 @@
 #ifndef RTESTACKALLOCATORSTRUCT_H_
 #define RTESTACKALLOCATORSTRUCT_H_
 
+#include <stddef.h>
 #include <stdint.h>
 struct rtEMMStackAllocator {
         unsigned char* buff;

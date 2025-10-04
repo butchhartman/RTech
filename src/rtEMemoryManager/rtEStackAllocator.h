@@ -53,4 +53,14 @@ enum rtEErrorCode rtEMM_stackMalloc(struct rtEMMStackAllocator* alloc, uint32_t 
 * @param ptr - The address of the pointer to free to. ptr is additionally set to nullptr
 */
 enum rtEErrorCode rtEMM_stackFreeTo(struct rtEMMStackAllocator* alloc, void** ptr);
+
+enum rtEErrorCode rtEMM_stackMallocAligned(struct rtEMMStackAllocator* alloc, uint32_t size, void** dest, size_t alignment);
+enum rtEErrorCode rtEMM_stackFreeToAligned(struct rtEMMStackAllocator* alloc, void** ptr, size_t alignment);
+/**
+* Dumps the alloc's internal buffer to a .dmp file
+*
+*
+* @param alloc - The stack allocator to get the block from
+*/
+enum rtEErrorCode rtEMM_dumpBuffer(struct rtEMMStackAllocator* alloc);
 #endif // RTESTACKALLOCATOR_H_

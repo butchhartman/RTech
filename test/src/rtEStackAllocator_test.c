@@ -126,7 +126,7 @@ RTEST_SUITE_BEGIN("rtEStackAllocator Tests") {
                 RTEST_ASSERT(rtEMM_createMemoryManager(&manager, 100) == rtEErrorCode_SUCCESS);
 
                 struct rtEMMStackAllocator* stackAlloc;
-                RTEST_ASSERT(rtEMM_allocateStackAllocator(manager, &stackAlloc, 10) == rtEErrorCode_SUCCESS);
+                RTEST_ASSERT(rtEMM_allocateStackAllocator(manager, &stackAlloc, 20) == rtEErrorCode_SUCCESS);
 
                 unsigned char* arrayOf10Chars;
 

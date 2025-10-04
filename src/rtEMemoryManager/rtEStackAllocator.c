@@ -1,6 +1,8 @@
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include <rtEMemoryManager/structs/rtEStackAllocatorStruct.h>
 #include <rtEMemoryManager/procs/rtEMemoryManagerHelperProcs.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -47,20 +49,69 @@ enum rtEErrorCode rtEMM_cleanupStackAllocator(struct rtEMMStackAllocator** alloc
         return rtEErrorCode_SUCCESS;
 }
 
+// I'll be honest, I didn't understand alignment until today. Pretty much all this code is from the book.
+// Is there ever a time when I'd want to allocate potentiall unaligned memory? probbles not
 enum rtEErrorCode rtEMM_stackMalloc(struct rtEMMStackAllocator* alloc, uint32_t size, void** dest) {
-        if (size > (alloc->buffSize - (alloc->buff - alloc->top))) {
+        size_t actualSize = size + alignof(max_align_t);
+        if (actualSize > (alloc->buffSize - (alloc->buff - alloc->top))) {
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
-        *dest = alloc->top;
-        alloc->top += size;
+        unsigned char* mem = alloc->top;
+        unsigned char* alignedMem;
+        size_t mask = alignof(max_align_t) - 1;
+        alignedMem = (unsigned char*)(((uintptr_t)mem + mask) & ~mask);
 
+        if (alignedMem == mem) {
+                alignedMem = alignedMem + alignof(max_align_t);
+        }
+
+        ptrdiff_t shift = alignedMem - mem;
+        alignedMem[-1] = (unsigned char)(shift & 0xFF);
+
+        printf("stack alloc of: %llu\n", actualSize);
+        *dest = alignedMem;
+        alloc->top += actualSize;
         return rtEErrorCode_SUCCESS;
 }
 
 enum rtEErrorCode rtEMM_stackFreeTo(struct rtEMMStackAllocator* alloc, void** ptr) {
-        alloc->top = *ptr;
+        printf("stack free\n");
+
+        unsigned char* alignedMem = *ptr;
+
+        ptrdiff_t shift = alignedMem[-1];
+        if (shift == 0) {
+                shift = 256;
+        }
+
+        unsigned char* rawMem = alignedMem - shift;
+
+        alloc->top = rawMem;
         *ptr = nullptr;
 
         return rtEErrorCode_SUCCESS;
+}
+
+enum rtEErrorCode rtEMM_stackMallocAligned(struct rtEMMStackAllocator* alloc, uint32_t size, void** dest, size_t alignment) {
+        size_t actualSize = size + alignment;
+        unsigned char* mem;
+        rtEMM_stackMalloc(alloc, actualSize, (void**)(&mem));
+        *dest = (void*)((uintptr_t)mem+(alignment-1) & ~(alignment-1));
+
+        if (mem == *dest) {
+                *dest = (unsigned char*)(*dest) + alignment;
+        }
+
+        ptrdiff_t shift = (unsigned char*)(*dest) - mem;
+
+        ((unsigned char*)(*dest))[-1] = shift;
+
+        return rtEErrorCode_SUCCESS;
+}
+enum rtEErrorCode rtEMM_stackFreeToAligned(struct rtEMMStackAllocator* alloc, void** ptr, size_t alignment) {
+}
+
+enum rtEErrorCode rtEMM_dumpBuffer(struct rtEMMStackAllocator* alloc) {
+        return rtEMM_dumpBlock("stackdump.dmp", alloc->buff, alloc->buffSize);
 }

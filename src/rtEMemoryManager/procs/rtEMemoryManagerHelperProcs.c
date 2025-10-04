@@ -74,7 +74,7 @@ enum rtEErrorCode rtEMM_dumpBlock(const char* outputDst, const unsigned char* bl
                         fclose(dumpFile);
                         return rtEErrorCode_MEMORY_ALLOC_FAILURE;
                 }
-                fprintf_s(dumpFile, "%d", *value);
+                fprintf_s(dumpFile, "0x%02X ", *value);
                 free(value);
         }
 

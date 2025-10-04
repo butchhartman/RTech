@@ -1,5 +1,6 @@
 #ifndef RTEMEMORYMANAGERSTRUCT_H_
 #define RTEMEMORYMANAGERSTRUCT_H_
+#include <stddef.h>
 #include <stdint.h>
 
 struct rtEMemoryManager {

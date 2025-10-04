@@ -1,8 +1,8 @@
 #ifndef UNICODE
         #define UNICODE
+#endif
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include <assert.h>
-#endif
 #include "rtELog/rtELog.h"
 #include <wchar.h>
 #include <stdlib.h>
@@ -12,7 +12,28 @@
 #include "rtEW/rtenginewindow.h"
 
 #define RTEW_WINDOW_CLASS_NAME L"RTEW_WindowClass"
-// TODO: Add error checking for Mutex functions
+
+static void* rtEW_mallocDefault(size_t size, void* usr) {
+        (void)usr;
+        return malloc(size);
+}
+
+static void rtEW_freeDefault(void** ptr, void* usr) {
+        (void)usr;
+        free(*ptr);
+}
+
+// Global default state for allocator
+struct rtEW_Allocator allocator = {
+        .rtEW_malloc = rtEW_mallocDefault,
+        .rtEW_free = rtEW_freeDefault,
+        .usr = nullptr,
+};
+
+enum rtEErrorCode rtEW_setAllocator(struct rtEW_Allocator alloc) {
+        allocator = alloc;
+        return rtEErrorCode_SUCCESS;
+}
 
 struct rtEngineWindow{
         char* windowTitle;
@@ -52,18 +73,23 @@ static enum rtEErrorCode registerWindowClass() {
 
 static enum rtEErrorCode initializeWindowMemory(struct rtEngineWindow** window, const char* windowTitle) {
         *window = nullptr;
-        size_t titleLen = strlen(windowTitle);
+        // +1 for null terminator. I noticed this when analyzing the memory using my dump file thing.
+        // Glad I caught it now instead of in 30 hours when I'm too afraid to touch anything
+        // This also caused me to go on a multiple hour long goose hunt of why this change broke everything
+        
+        // It was alignment. It's always alignment.
+        size_t titleLen = strlen(windowTitle) + 1;
 
-        *window = malloc(sizeof(struct rtEngineWindow));
+        *window = allocator.rtEW_malloc(sizeof(struct rtEngineWindow), allocator.usr);
 
         if (*window == nullptr) {
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
-        (*window)->windowTitle = malloc(titleLen * sizeof(char));
+        (*window)->windowTitle = allocator.rtEW_malloc(titleLen * sizeof(char), allocator.usr);
 
         if ((*window)->windowTitle == nullptr) {
-                free(window);
+                allocator.rtEW_free((void**)window, allocator.usr);
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -109,7 +135,9 @@ static enum rtEErrorCode createWin32WorkerThread(struct rtEngineWindow* window, 
 
         // Waits for the dispatched worker thread to finish window creation and signal the semaphore
         rtELog_logInfo("Waiting for worker thread to signal semaphore");
+        printf("waiting for semaphore");
         WaitForSingleObject(windowAndSemaphore->semaphore, INFINITE);
+        printf("semaphorehit");
         rtELog_logInfo("Worker thread signaled semaphore, continuing");
 
         // TODO: This function can fail, consider error checking in some form
@@ -118,6 +146,7 @@ static enum rtEErrorCode createWin32WorkerThread(struct rtEngineWindow* window, 
         if (windowAndSemaphore->workerThreadSuccess != true) {
                 // TODO: More relevant error code 
                 CloseHandle(window->msgLoopThread);
+                printf("Worker thread did not succeed");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -147,26 +176,28 @@ static enum rtEErrorCode dispatchWin32WorkerThread(struct rtEngineWindow* window
 static enum rtEErrorCode convertWindowTitleToUnicode(struct rtEngineWindow* window, wchar_t** dest) {
         // Issues were arising because I dont think the window title string was null terminated LOL
         // Since I specified the string length, the count does NOT include the null terminator
-        int windowTitleMBCharCount= MultiByteToWideChar(CP_UTF8, 0, window->windowTitle, window->windowTitleLength, NULL, 0);
-
-        if (windowTitleMBCharCount == 0) {
+        int windowTitleMBCharCount= MultiByteToWideChar(CP_UTF8, 0, window->windowTitle, -1, NULL, 0);
+        if (windowTitleMBCharCount <= 0) {
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
-        // Makes space for the NULL terminator, then zeroes the memory
-        *dest = malloc((windowTitleMBCharCount + 1) * sizeof(wchar_t));
+        *dest = allocator.rtEW_malloc(windowTitleMBCharCount * sizeof(wchar_t), allocator.usr);
+        unsigned char* fart= allocator.rtEW_malloc(500, allocator.usr);
+        memset(fart, 0xFF, 500);
+
+        printf("WCHART SIZE: %d", windowTitleMBCharCount*sizeof(wchar_t));
 
         if (*dest == nullptr) {
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
-        memset(*dest, 0, (windowTitleMBCharCount + 1) * sizeof(wchar_t));
+        memset(*dest, 0, (windowTitleMBCharCount) * sizeof(wchar_t));
 
         //Yet again, does not include NULL terminator. I assume this works because 0 counts as a terminator.
-        int convertedChars = MultiByteToWideChar(CP_UTF8, 0, window->windowTitle, window->windowTitleLength, *dest, windowTitleMBCharCount);
+        int convertedChars = MultiByteToWideChar(CP_UTF8, 0, window->windowTitle, -1, *dest, windowTitleMBCharCount);
 
-        if (convertedChars == 0) {
-                free(*dest);
+        if (convertedChars <= 0) {
+                allocator.rtEW_free((void*)dest, allocator.usr);
                 *dest = nullptr;
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
@@ -178,6 +209,7 @@ static enum rtEErrorCode createWindowWindowHandle(struct rtEngineWindow* window)
         enum rtEErrorCode err;
         wchar_t* unicodeWindowName;
         err = convertWindowTitleToUnicode(window, &unicodeWindowName);
+        printf("UNICODE NAME: %ls\n", unicodeWindowName);
 
         window->windowHandle = CreateWindowEx(
                 0,
@@ -191,13 +223,16 @@ static enum rtEErrorCode createWindowWindowHandle(struct rtEngineWindow* window)
                 GetModuleHandle(NULL),
                 NULL
         );
-        
+
         if (err == rtEErrorCode_SUCCESS) {
-                free(unicodeWindowName);
+                printf("succ");
+                allocator.rtEW_free((void**)(&unicodeWindowName), allocator.usr);
         }
 
         if (window->windowHandle == NULL) {
                 // TODO: Not sure if windowPtr and window occupy the same memory location. 
+                printf("NULL WINDOW HANDLKE");
+                printf("GET LAST ERROR: %lu", GetLastError());
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -235,13 +270,17 @@ enum rtEErrorCode rtEW_createWindow(struct rtEngineWindow** window, const char* 
                 return err;
         }
 
+        printf("we have memory");
+
         err = dispatchWin32WorkerThread(*window);
 
         if (err != rtEErrorCode_SUCCESS) {
-                free((*window)->windowTitle);
-                free(*window);
+                allocator.rtEW_free((void**)&(*window)->windowTitle, allocator.usr);
+                allocator.rtEW_free((void**)window, allocator.usr);
                 return err;
         }
+
+        printf("we have worker thread");
 
         return rtEErrorCode_SUCCESS;
 }
@@ -264,6 +303,7 @@ DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore) {
                 ReleaseSemaphore(semaphore, 1, NULL);
                 return EXIT_FAILURE; 
         }
+        printf("Created MUTEX");
 
 
         // Notifies main thread that it can stop waiting and return the create window function.
@@ -276,6 +316,8 @@ DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore) {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
         }
+
+        printf("Message Loop termination");
         
         WaitForSingleObject(windowPtr->shouldCloseMutex, INFINITE);
         windowPtr->shouldClose = true;
@@ -306,15 +348,19 @@ enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow** window) {
         }
         
         rtELog_log("Waiting for win32 worker thread to exit");
-        CloseHandle(windowPtr->msgLoopThread);
+        // TODO:
+        // You're really not supposed to use terminate thread, but setting should close did not cause the thread to exit because GetMessage blocks. I dont know what to do as of now, because I can't pump the queue from here since it is on a separate thread.
+        windowPtr->shouldClose = true;
+        TerminateThread(windowPtr->msgLoopThread, 0);
         WaitForSingleObject(windowPtr->msgLoopThread, INFINITE);
         rtELog_log("Win32 worker thread exited; freeing resources");
+        CloseHandle(windowPtr->msgLoopThread);
         DestroyWindow(windowPtr->windowHandle);
         CloseHandle(windowPtr->msgLoopThread);
         CloseHandle(windowPtr->shouldCloseMutex);
 
-        free(windowPtr->windowTitle);
-        free(windowPtr);
+        allocator.rtEW_free((void**)&(windowPtr->windowTitle), allocator.usr);
+        allocator.rtEW_free((void**)&windowPtr, allocator.usr);
 
         *window = nullptr;
         return rtEErrorCode_SUCCESS;
