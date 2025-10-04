@@ -1,9 +1,10 @@
 #ifndef RTESTACKALLOCATORSTRUCT_H_
 #define RTESTACKALLOCATORSTRUCT_H_
 
+#include <stdint.h>
 struct rtEMMStackAllocator {
         unsigned char* buff;
-        size_t buffSize;
+        uint64_t buffSize;
         unsigned char* top;
         struct rtEMemoryManager* manager;
 };

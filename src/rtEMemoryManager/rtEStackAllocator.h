@@ -15,8 +15,6 @@ struct rtEMMStackAllocator;
 /**
 * Allocates a stack allocator using the memory contained within a @ref rtEMemoryManager
 *
-* @todo
-* Fix implementation only allowing 2^32 - 1 bytes to be allocated
 *
 * @note
 * The internal buffer of the stack allocator is guaranteed to be buffSize bytes large,

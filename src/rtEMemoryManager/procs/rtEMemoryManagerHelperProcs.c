@@ -6,11 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned char** block, size_t blockSize, size_t allocatorSize) {
+enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned char** block, uint64_t blockSize, size_t allocatorSize) {
         unsigned char* bufferPtr = manager->buff;
         *block = nullptr;
 
-        size_t buffActualNeededSize = blockSize + allocatorSize;
+        uint64_t buffActualNeededSize = blockSize + allocatorSize;
 
         while (*block == nullptr) {
                 printf("iter\n");
@@ -19,24 +19,26 @@ enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned ch
                         return rtEErrorCode_MEMORY_ALLOC_FAILURE;
                 }
 
-                uint32_t headerBlockSize = GET_BUFFER_SIZE(bufferPtr);
-                uint8_t headerBlockOccupied = GET_BUFFER_IS_OCCUPIED(bufferPtr);
-                printf("found block size: %u, occupied: %u\n", headerBlockSize, headerBlockOccupied);
+                uint64_t headerBlockSize = GET_BUFFER_SIZE(bufferPtr);
+                uint64_t headerBlockOccupied = GET_BUFFER_IS_OCCUPIED(bufferPtr);
+                printf("found block size: %llu, occupied: %llu\n", headerBlockSize, headerBlockOccupied);
 
                 if (!headerBlockOccupied && headerBlockSize >= buffActualNeededSize) {
-                        uint32_t deltaM = (bufferPtr - manager->buff);
+                        uint64_t deltaM = (bufferPtr - manager->buff);
 
-                        printf("delta M: %u\n", deltaM);
+                        printf("delta M: %llu\n", deltaM);
                         *block = bufferPtr;
 
-                        memcpy(manager->buff + deltaM, &buffActualNeededSize, sizeof(uint32_t));
-                        *(manager->buff + (deltaM)+ sizeof(uint32_t)) = 0xFF;
+                        uint64_t header = buffActualNeededSize | BUFFER_IS_OCCUPIED_BIT;
 
-                        uint32_t newSize = headerBlockSize - buffActualNeededSize; 
-                        printf("ns: %u\n", newSize);
+                        memcpy(manager->buff + deltaM, &header, IN_BAND_HEADER_SIZE);
+                        //*(manager->buff + (deltaM)+ sizeof(uint32_t)) = 0xFF;
+
+                        uint64_t newSize = headerBlockSize - buffActualNeededSize; 
+                        printf("ns: %llu\n", newSize);
                         if (newSize != 0) {
-                                memcpy(manager->buff + deltaM + buffActualNeededSize + IN_BAND_HEADER_SIZE, &newSize, sizeof(uint32_t));
-                                *(manager->buff +deltaM + buffActualNeededSize + IN_BAND_HEADER_SIZE + sizeof(uint32_t)) = 0x00;
+                                memcpy(manager->buff + deltaM + buffActualNeededSize + IN_BAND_HEADER_SIZE, &newSize, IN_BAND_HEADER_SIZE);
+//                                *(manager->buff +deltaM + buffActualNeededSize + IN_BAND_HEADER_SIZE + sizeof(uint32_t)) = 0x00;
                         } else {
                                 printf("No space for header, did not create\n");
                         }

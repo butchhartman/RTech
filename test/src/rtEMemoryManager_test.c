@@ -26,4 +26,15 @@ RTEST_SUITE_BEGIN("rtEMemoryManager Tests") {
                 RTEST_ASSERT(manager == nullptr);
         }
 
+        RTEST_CASE("Very larger blocks of memory can be allocated") {
+                struct rtEMemoryManager* manager;
+                // minecraft level ram requirements
+                RTEST_ASSERT(rtEMM_createMemoryManager(&manager, 8000000000) == rtEErrorCode_SUCCESS);
+
+                RTEST_ASSERT(manager != nullptr);
+
+                RTEST_ASSERT(rtEMM_cleanupMemoryManager(&manager) == rtEErrorCode_SUCCESS);
+
+                RTEST_ASSERT(manager == nullptr);
+        }
 }

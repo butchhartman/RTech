@@ -17,9 +17,15 @@
 //TODO: Stop headers denoting size 0 from eating space in allocations
 
 
-enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint32_t buffSize) {
-        uint32_t buffSizeWithManager = sizeof(struct rtEMemoryManager) + buffSize + IN_BAND_HEADER_SIZE;
-        printf("BSWM: %u", buffSizeWithManager);
+enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint64_t buffSize) {
+        // MSB is reserved for occupied bit, so the range of values is 0-2^63-1, which should be more than enough for at least the next 100 years
+        if (buffSize > INT64_MAX) {
+                // TODO: create real error code
+                return rtEErrorCode_MEMORY_ALLOC_FAILURE;
+        }
+
+        uint64_t buffSizeWithManager = sizeof(struct rtEMemoryManager) + buffSize + IN_BAND_HEADER_SIZE;
+        printf("BSWM: %llu", buffSizeWithManager);
 
         unsigned char* memoryBuffer = malloc(buffSizeWithManager);
 
@@ -31,15 +37,20 @@ enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint3
         memset(memoryBuffer, 0, buffSizeWithManager);
         *obj = (struct rtEMemoryManager*)memoryBuffer;
 
-        printf("buff actual size: %u\n", buffSize);
+        printf("buff actual size: %llu\n", buffSize);
         (*obj)->buff = memoryBuffer + sizeof(struct rtEMemoryManager);
         // Cannot assign to buffer in this way because it implicily converts the whole value to a char. memcpy is needed
 //        *(*obj)->buff = 0xF0F0F0F0;
-        memcpy((*obj)->buff, &buffSize, sizeof(uint32_t));
-        *((*obj)->buff + sizeof(uint32_t)) = 0x00;
-        (*obj)->buffSize = buffSize + IN_BAND_HEADER_SIZE;
 
-        printf("extracted block size: %u, block occupied: %u\n", GET_BUFFER_SIZE((*obj)->buff), GET_BUFFER_IS_OCCUPIED((*obj)->buff));
+        // Should not need to zero the occupied bit because buffSize can never be big enough to use it
+        memcpy((*obj)->buff, &buffSize, IN_BAND_HEADER_SIZE);
+       (*obj)->buffSize = buffSize + IN_BAND_HEADER_SIZE;
+
+//        memcpy((*obj)->buff, &buffSize, sizeof(uint32_t));
+ //       *((*obj)->buff + sizeof(uint32_t)) = 0x00;
+  //      (*obj)->buffSize = buffSize + IN_BAND_HEADER_SIZE;
+
+        printf("extracted block size: %llu, block occupied: %llu\n", GET_BUFFER_SIZE((*obj)->buff), GET_BUFFER_IS_OCCUPIED((*obj)->buff));
 
         return rtEErrorCode_SUCCESS;
 }

@@ -146,4 +146,16 @@ RTEST_SUITE_BEGIN("rtEStackAllocator Tests") {
                 RTEST_ASSERT(rtEMM_cleanupStackAllocator(&stackAlloc) == rtEErrorCode_SUCCESS);
                 RTEST_ASSERT(rtEMM_cleanupMemoryManager(&manager) == rtEErrorCode_SUCCESS);
         }
+
+        RTEST_CASE("A large stack allocator can be allocated from a large memory manager") {
+                struct rtEMemoryManager* manager;
+                // 8 gigs
+                RTEST_ASSERT(rtEMM_createMemoryManager(&manager, 8000000000) == rtEErrorCode_SUCCESS);
+
+                struct rtEMMStackAllocator* stackAlloc;
+                RTEST_ASSERT(rtEMM_allocateStackAllocator(manager, &stackAlloc, 7000000000) == rtEErrorCode_SUCCESS);
+                RTEST_ASSERT(rtEMM_cleanupStackAllocator(&stackAlloc) == rtEErrorCode_SUCCESS);
+
+                RTEST_ASSERT(rtEMM_cleanupMemoryManager(&manager) == rtEErrorCode_SUCCESS);
+        }
 }

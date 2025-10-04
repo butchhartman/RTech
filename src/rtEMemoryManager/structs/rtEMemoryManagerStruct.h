@@ -4,7 +4,7 @@
 
 struct rtEMemoryManager {
         unsigned char* buff;
-        uint32_t buffSize;
+        uint64_t buffSize;
 };
 
 #endif // RTEMEMORYMANAGERSTRUCT_H_

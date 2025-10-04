@@ -4,12 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 
-enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager* parent, struct rtEMMStackAllocator** child, size_t buffSize) {
-        size_t buffActualSize = buffSize + sizeof(struct rtEMMStackAllocator); //+ IN_BAND_HEADER_SIZE;
+enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager* parent, struct rtEMMStackAllocator** child, uint64_t buffSize) {
+        // The size of a SA is implicity limited to 2^63-1 because of the same limit imposed on the memory manager
+        uint64_t buffActualSize = buffSize + sizeof(struct rtEMMStackAllocator); //+ IN_BAND_HEADER_SIZE;
         // find empty block
         unsigned char* block = nullptr;
 
-        printf("requested block size: %u, STACKALLOCSIZE: %u, needed block size: %u\n", buffSize, sizeof(struct rtEMMStackAllocator), buffActualSize);
+        printf("requested block size: %llu, STACKALLOCSIZE: %llu, needed block size: %llu\n", buffSize, (uint64_t)sizeof(struct rtEMMStackAllocator), buffActualSize);
+        // TODO: Remove the allocator size parameter, one can just calculate the size bbeforehand
         enum rtEErrorCode err = rtEMM_findBlock(parent, &block, buffSize, sizeof(struct rtEMMStackAllocator));
         if (err != rtEErrorCode_SUCCESS) {
                 *child = nullptr;

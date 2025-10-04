@@ -17,7 +17,7 @@
 * Blocks must be be blockSize + allocatorSize large, as the allocator itself will be
 * stored in the block.
 */
-enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned char** block, size_t blockSize, size_t allocatorSize);
+enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned char** block, uint64_t blockSize, size_t allocatorSize);
 
 /**
 * Writes the contents of block to a file in outputDst
