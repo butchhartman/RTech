@@ -68,12 +68,15 @@ enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow** window);
 /**
 * Returns the internal flag indicating if a window should be terminated.
 *
-* @todo
-* There is currently no way to modify this flag without user input. This needs to be changed.
-*
 * @param window - The window to query
 */
 bool rtEW_windowShouldClose(const struct rtEngineWindow* window);
 
-// TODO: Implement the actual window logic
+/**
+* Sets the internal flag indicating the window should close to true. The window is unrecoverable after calling this function.
+*
+* @param window - The window to close
+*/
+void rtEW_setWindowShouldClose(struct rtEngineWindow* window);
+
 #endif //RTENGINEWINDOW_H_ 

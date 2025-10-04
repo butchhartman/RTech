@@ -272,7 +272,7 @@ DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore) {
         // The semaphore AND window struct is also void after this line (heap dealloc)
         rtELog_logInfo("Beginning message Loop");
         MSG msg = { };
-        while (GetMessage(&msg, NULL, 0, 0) > 0) {
+        while (GetMessage(&msg, NULL, 0, 0) > 0 && windowPtr->shouldClose == false) {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
         }
@@ -321,10 +321,16 @@ enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow** window) {
 }
 
 bool rtEW_windowShouldClose(const struct rtEngineWindow* window) {
+        // Does this really need a mutex?
         WaitForSingleObject(window->shouldCloseMutex, INFINITE);
         bool returnShouldClose = window->shouldClose;
         ReleaseMutex(window->shouldCloseMutex);
         return returnShouldClose;
+}
+
+void rtEW_setWindowShouldClose(struct rtEngineWindow* window) {
+        // Does this really need a mutex?
+        window->shouldClose = true;
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {

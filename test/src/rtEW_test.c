@@ -55,9 +55,7 @@ RTEST_SUITE_BEGIN("rtEW Tests") {
                 RTEST_ASSERT(window == nullptr);
         }
 
-        RTEST_CASE("Window's should close state can be queried") {
-                // TODO : The should close state will NEVER be changed unless the message loop terminates 
-                // or the window is cleaned-up (in which case there is no longer a 'should close' variable to access. Do I need to test for this?
+        RTEST_CASE("Windows should close state can be queried") {
                 struct rtEngineWindow* window;
                 RTEST_ASSERT(rtEW_createWindow(&window, "Test") == rtEErrorCode_SUCCESS);
 
@@ -67,5 +65,23 @@ RTEST_SUITE_BEGIN("rtEW Tests") {
                 RTEST_ASSERT(rtEW_cleanupWindow(&window) == rtEErrorCode_SUCCESS);
                 RTEST_ASSERT(window == nullptr);
         }
+
+        RTEST_CASE("Windows should close state can be set") {
+                struct rtEngineWindow* window;
+                RTEST_ASSERT(rtEW_createWindow(&window, "Test") == rtEErrorCode_SUCCESS);
+
+                rtEW_showWindow(window);
+                RTEST_ASSERT(rtEW_windowShouldClose(window) == false);
+
+                rtEW_setWindowShouldClose(window);
+                RTEST_ASSERT(rtEW_windowShouldClose(window) == true);
+                while (!rtEW_windowShouldClose(window)) {
+
+                }
+
+                RTEST_ASSERT(rtEW_cleanupWindow(&window) == rtEErrorCode_SUCCESS);
+                RTEST_ASSERT(window == nullptr);
+        }
+
         rtEW_cleanup();
 }
