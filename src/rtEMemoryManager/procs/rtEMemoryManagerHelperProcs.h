@@ -10,14 +10,16 @@
 * Finds a block of memory in manager which is blockSize + allocatorSize bytes large 
 * and assigns it to block
 *
+* @note
+* Blocks should be be blockSize + allocatorSize large, as the allocator itself will be
+* typically be stored in the block.
+*
 * @param manager - The manager to allocate from
 * @param block - The address of the pointer to return the start of the block to 
 * @param blockSize - The size in bytes the requested block must be
-* @param allocatorSize - The size of the allocator that will utilize the found block. 
-* Blocks must be be blockSize + allocatorSize large, as the allocator itself will be
-* stored in the block.
+*
 */
-enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned char** block, uint64_t blockSize, size_t allocatorSize);
+enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned char** block, uint64_t blockSize);
 
 /**
 * Writes the contents of block to a file in outputDst

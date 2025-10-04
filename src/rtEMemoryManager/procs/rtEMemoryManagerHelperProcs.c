@@ -6,11 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned char** block, uint64_t blockSize, size_t allocatorSize) {
+enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned char** block, uint64_t blockSize) {
         unsigned char* bufferPtr = manager->buff;
         *block = nullptr;
-
-        uint64_t buffActualNeededSize = blockSize + allocatorSize;
 
         while (*block == nullptr) {
                 printf("iter\n");
@@ -23,21 +21,21 @@ enum rtEErrorCode rtEMM_findBlock(struct rtEMemoryManager* manager,  unsigned ch
                 uint64_t headerBlockOccupied = GET_BUFFER_IS_OCCUPIED(bufferPtr);
                 printf("found block size: %llu, occupied: %llu\n", headerBlockSize, headerBlockOccupied);
 
-                if (!headerBlockOccupied && headerBlockSize >= buffActualNeededSize) {
+                if (!headerBlockOccupied && headerBlockSize >= blockSize) {
                         uint64_t deltaM = (bufferPtr - manager->buff);
 
                         printf("delta M: %llu\n", deltaM);
                         *block = bufferPtr;
 
-                        uint64_t header = buffActualNeededSize | BUFFER_IS_OCCUPIED_BIT;
+                        uint64_t header = blockSize | BUFFER_IS_OCCUPIED_BIT;
 
                         memcpy(manager->buff + deltaM, &header, IN_BAND_HEADER_SIZE);
                         //*(manager->buff + (deltaM)+ sizeof(uint32_t)) = 0xFF;
 
-                        uint64_t newSize = headerBlockSize - buffActualNeededSize; 
+                        uint64_t newSize = headerBlockSize - blockSize; 
                         printf("ns: %llu\n", newSize);
                         if (newSize != 0) {
-                                memcpy(manager->buff + deltaM + buffActualNeededSize + IN_BAND_HEADER_SIZE, &newSize, IN_BAND_HEADER_SIZE);
+                                memcpy(manager->buff + deltaM + blockSize + IN_BAND_HEADER_SIZE, &newSize, IN_BAND_HEADER_SIZE);
 //                                *(manager->buff +deltaM + buffActualNeededSize + IN_BAND_HEADER_SIZE + sizeof(uint32_t)) = 0x00;
                         } else {
                                 printf("No space for header, did not create\n");

@@ -11,8 +11,7 @@ enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager* parent, 
         unsigned char* block = nullptr;
 
         printf("requested block size: %llu, STACKALLOCSIZE: %llu, needed block size: %llu\n", buffSize, (uint64_t)sizeof(struct rtEMMStackAllocator), buffActualSize);
-        // TODO: Remove the allocator size parameter, one can just calculate the size bbeforehand
-        enum rtEErrorCode err = rtEMM_findBlock(parent, &block, buffSize, sizeof(struct rtEMMStackAllocator));
+        enum rtEErrorCode err = rtEMM_findBlock(parent, &block, buffActualSize);
         if (err != rtEErrorCode_SUCCESS) {
                 *child = nullptr;
                 return err;
