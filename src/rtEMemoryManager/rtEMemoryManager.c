@@ -7,7 +7,6 @@
 #include <rtEMemoryManager/macros/rtEMMMacros.h>
 #include <rtEMemoryManager/structs/rtEMemoryManagerStruct.h>
 
-
 // How do I find free contiguous blocks to return?
 // Solution: in-band headers. Each 'block' of memory has a value denoting its size and if it is free or not. I can search through this quickly.
 // The buff pointer will always lie on a in-band header. The LSB will be whether the block is free, and the remaining MSBs will be the block size
@@ -41,6 +40,7 @@ enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint3
         (*obj)->buffSize = buffSize + IN_BAND_HEADER_SIZE;
 
         printf("extracted block size: %u, block occupied: %u\n", GET_BUFFER_SIZE((*obj)->buff), GET_BUFFER_IS_OCCUPIED((*obj)->buff));
+
         return rtEErrorCode_SUCCESS;
 }
 
@@ -57,3 +57,4 @@ enum rtEErrorCode rtEMM_cleanupMemoryManager(struct rtEMemoryManager** obj) {
 
        return rtEErrorCode_SUCCESS;
 }
+
