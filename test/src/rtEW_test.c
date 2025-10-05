@@ -1,5 +1,6 @@
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtEMemoryManager/rtEMemoryManager.h"
+#include "rtEMemoryManager/structs/rtEAllocatorProcs.h"
 #include "rtEMemoryManager/structs/rtEMemoryManagerStruct.h"
 #include "rtEMemoryManager/structs/rtEStackAllocatorStruct.h"
 #include "rtEW/rtenginewindow.h"
@@ -116,9 +117,9 @@ RTEST_SUITE_BEGIN("rtEW Tests") {
                 *test = INT_MAX;
 
 
-                struct rtEW_Allocator allocator = {
-                        .rtEW_malloc = customMalloc,
-                        .rtEW_free = customFree,
+                struct rtEAllocatorProcs allocator = {
+                        .rtEA_malloc = customMalloc,
+                        .rtEA_free = customFree,
                         .usr = (void*)(stallocator)
                 };
 

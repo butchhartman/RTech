@@ -10,28 +10,29 @@
 #include <stdio.h>
 #include <Windows.h>
 #include "rtEW/rtenginewindow.h"
+#include "rtEMemoryManager/structs/rtEAllocatorProcs.h"
 
 #define RTEW_WINDOW_CLASS_NAME L"RTEW_WindowClass"
 
-static void* rtEW_mallocDefault(size_t size, void* usr) {
+static void* rtEA_mallocDefault(size_t size, void* usr) {
         (void)usr;
         return malloc(size);
 }
 
-static void rtEW_freeDefault(void** ptr, void* usr) {
+static void rtEA_freeDefault(void** ptr, void* usr) {
         (void)usr;
         free(*ptr);
 }
 
-// Global default state for allocator
-struct rtEW_Allocator allocator = {
-        .rtEW_malloc = rtEW_mallocDefault,
-        .rtEW_free = rtEW_freeDefault,
-        .usr = nullptr,
+// Global default state for RTEW_GLOBAL_alloc
+struct rtEAllocatorProcs RTEW_GLOBAL_alloc = {
+        .rtEA_malloc = rtEA_mallocDefault,
+        .rtEA_free = rtEA_freeDefault,
+        .usr = nullptr
 };
 
-enum rtEErrorCode rtEW_setAllocator(struct rtEW_Allocator alloc) {
-        allocator = alloc;
+enum rtEErrorCode rtEW_setAllocator(struct rtEAllocatorProcs alloc) {
+        RTEW_GLOBAL_alloc = alloc;
         return rtEErrorCode_SUCCESS;
 }
 
@@ -80,16 +81,16 @@ static enum rtEErrorCode initializeWindowMemory(struct rtEngineWindow** window, 
         // It was alignment. It's always alignment.
         size_t titleLen = strlen(windowTitle) + 1;
 
-        *window = allocator.rtEW_malloc(sizeof(struct rtEngineWindow), allocator.usr);
+        *window = RTEW_GLOBAL_alloc.rtEA_malloc(sizeof(struct rtEngineWindow), RTEW_GLOBAL_alloc.usr);
 
         if (*window == nullptr) {
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
-        (*window)->windowTitle = allocator.rtEW_malloc(titleLen * sizeof(char), allocator.usr);
+        (*window)->windowTitle = RTEW_GLOBAL_alloc.rtEA_malloc(titleLen * sizeof(char), RTEW_GLOBAL_alloc.usr);
 
         if ((*window)->windowTitle == nullptr) {
-                allocator.rtEW_free((void**)window, allocator.usr);
+                RTEW_GLOBAL_alloc.rtEA_free((void**)window, RTEW_GLOBAL_alloc.usr);
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -179,7 +180,7 @@ static enum rtEErrorCode convertWindowTitleToUnicode(struct rtEngineWindow* wind
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
-        *dest = allocator.rtEW_malloc(windowTitleMBCharCount * sizeof(wchar_t), allocator.usr);
+        *dest = RTEW_GLOBAL_alloc.rtEA_malloc(windowTitleMBCharCount * sizeof(wchar_t), RTEW_GLOBAL_alloc.usr);
 
         printf("WCHART SIZE: %d", windowTitleMBCharCount*sizeof(wchar_t));
 
@@ -192,7 +193,7 @@ static enum rtEErrorCode convertWindowTitleToUnicode(struct rtEngineWindow* wind
         int convertedChars = MultiByteToWideChar(CP_UTF8, 0, window->windowTitle, -1, *dest, windowTitleMBCharCount);
 
         if (convertedChars <= 0) {
-                allocator.rtEW_free((void**)dest, allocator.usr);
+                RTEW_GLOBAL_alloc.rtEA_free((void**)dest, RTEW_GLOBAL_alloc.usr);
                 *dest = nullptr;
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
@@ -221,7 +222,7 @@ static enum rtEErrorCode createWindowWindowHandle(struct rtEngineWindow* window)
 
         if (err == rtEErrorCode_SUCCESS) {
                 printf("succ");
-                allocator.rtEW_free((void**)(&unicodeWindowName), allocator.usr);
+                RTEW_GLOBAL_alloc.rtEA_free((void**)(&unicodeWindowName), RTEW_GLOBAL_alloc.usr);
         }
 
         if (window->windowHandle == NULL) {
@@ -269,8 +270,8 @@ enum rtEErrorCode rtEW_createWindow(struct rtEngineWindow** window, const char* 
         err = dispatchWin32WorkerThread(*window);
 
         if (err != rtEErrorCode_SUCCESS) {
-                allocator.rtEW_free((void**)&(*window)->windowTitle, allocator.usr);
-                allocator.rtEW_free((void**)window, allocator.usr);
+                RTEW_GLOBAL_alloc.rtEA_free((void**)&(*window)->windowTitle, RTEW_GLOBAL_alloc.usr);
+                RTEW_GLOBAL_alloc.rtEA_free((void**)window, RTEW_GLOBAL_alloc.usr);
                 return err;
         }
 
@@ -353,8 +354,8 @@ enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow** window) {
         CloseHandle(windowPtr->msgLoopThread);
         CloseHandle(windowPtr->shouldCloseMutex);
 
-        allocator.rtEW_free((void**)&(windowPtr->windowTitle), allocator.usr);
-        allocator.rtEW_free((void**)&windowPtr, allocator.usr);
+        RTEW_GLOBAL_alloc.rtEA_free((void**)&(windowPtr->windowTitle), RTEW_GLOBAL_alloc.usr);
+        RTEW_GLOBAL_alloc.rtEA_free((void**)&windowPtr, RTEW_GLOBAL_alloc.usr);
 
         *window = nullptr;
         return rtEErrorCode_SUCCESS;

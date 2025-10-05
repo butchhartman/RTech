@@ -7,14 +7,7 @@
 * 
 */
 
-typedef void*(*pfnrtEW_malloc)(size_t size, void* usr);
-typedef void(*pfnrtEW_free)(void** ptr, void* usr);
-
-struct rtEW_Allocator {
-        pfnrtEW_malloc rtEW_malloc;
-        pfnrtEW_free rtEW_free;
-        void* usr;
-};
+struct rtEAllocatorProcs;
 
 /**
 * An opaque handle representing a window
@@ -27,9 +20,9 @@ struct rtEngineWindow;
 * @warning
 * This must be set before calling @ref rtEW_init and should not be set after.
 *
-* @param alloc - a @ref rtEW_Allocator populated with the relevant functions
+* @param alloc - a @ref rtEAllocatorProcs populated with the relevant functions
 */
-enum rtEErrorCode rtEW_setAllocator(struct rtEW_Allocator alloc);
+enum rtEErrorCode rtEW_setAllocator(struct rtEAllocatorProcs alloc);
 
 /**
 * Initializes internal systems needed before any rtEW functions can run.
