@@ -1,5 +1,6 @@
 #ifndef RTENGINEWINDOW_H_
 #define RTENGINEWINDOW_H_
+#include "rtEMemoryManager/rtEAllocatorProcs.h"
 #include <rtEErrorCodes/rtEErrorCodes.h>
 
 /**
@@ -7,7 +8,6 @@
 * 
 */
 
-struct rtEAllocatorProcs;
 
 /**
 * An opaque handle representing a window

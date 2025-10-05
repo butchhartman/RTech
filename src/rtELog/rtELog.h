@@ -6,6 +6,8 @@
 */
 
 
+#include "rtEErrorCodes/rtEErrorCodes.h"
+#include "rtEMemoryManager/rtEAllocatorProcs.h"
 #ifndef NDEBUG
         /**
         * Identical to @ref rtELog_logError but resolves to nothing on release build
@@ -38,6 +40,7 @@
 */
 #define rtELog_logInfo(msg, ...) rtELog_log("*INFO:  " msg, __VA_ARGS__)
 
+enum rtEErrorCode rtELog_setAllocator(struct rtEAllocatorProcs alloc); 
 
 /**
 * Initializes the global state of the rtELogger. This must happen before any logging functions are called. All subsequent logging calls will
@@ -46,7 +49,7 @@
 * @param logFileName The name of the file to write the log to. The passed file name will be appended in the following format: 
 *                    _DATE_TIME.log
 */
-void rtELog_init(const char* logFileName);
+enum rtEErrorCode rtELog_init(const char* logFileName);
 
 /**
 * Writes the passed message to the global log file initialized by rtELog_init.
@@ -61,6 +64,6 @@ void rtELog_log(const char* message, ...);
 /**
 * Closes the global log file initialized by rtELog_init. Should be done when the log file is no longer in use OR the program is terminating.
 */
-void rtELog_cleanup();
+enum rtEErrorCode rtELog_cleanup();
 
 #endif // RTELOG_H_

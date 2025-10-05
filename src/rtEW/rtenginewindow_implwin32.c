@@ -14,16 +14,6 @@
 
 #define RTEW_WINDOW_CLASS_NAME L"RTEW_WindowClass"
 
-static void* rtEA_mallocDefault(size_t size, void* usr) {
-        (void)usr;
-        return malloc(size);
-}
-
-static void rtEA_freeDefault(void** ptr, void* usr) {
-        (void)usr;
-        free(*ptr);
-}
-
 // Global default state for RTEW_GLOBAL_alloc
 struct rtEAllocatorProcs RTEW_GLOBAL_alloc = {
         .rtEA_malloc = rtEA_mallocDefault,

@@ -27,4 +27,5 @@ set(RTECH_ONLY_TEST_SOURCES 1)
 addTestSuite(src/rtEW_test.c)
 addTestSuite(src/rtEMemoryManager_test.c)
 addTestSuite(src/rtEStackAllocator_test.c)
+addTestSuite(src/rtELog_test.c)
 
