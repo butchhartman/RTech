@@ -174,16 +174,12 @@ static enum rtEErrorCode dispatchWin32WorkerThread(struct rtEngineWindow* window
 }
 
 static enum rtEErrorCode convertWindowTitleToUnicode(struct rtEngineWindow* window, wchar_t** dest) {
-        // Issues were arising because I dont think the window title string was null terminated LOL
-        // Since I specified the string length, the count does NOT include the null terminator
         int windowTitleMBCharCount= MultiByteToWideChar(CP_UTF8, 0, window->windowTitle, -1, NULL, 0);
         if (windowTitleMBCharCount <= 0) {
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
         *dest = allocator.rtEW_malloc(windowTitleMBCharCount * sizeof(wchar_t), allocator.usr);
-        unsigned char* fart= allocator.rtEW_malloc(500, allocator.usr);
-        memset(fart, 0xFF, 500);
 
         printf("WCHART SIZE: %d", windowTitleMBCharCount*sizeof(wchar_t));
 
@@ -193,11 +189,10 @@ static enum rtEErrorCode convertWindowTitleToUnicode(struct rtEngineWindow* wind
 
         memset(*dest, 0, (windowTitleMBCharCount) * sizeof(wchar_t));
 
-        //Yet again, does not include NULL terminator. I assume this works because 0 counts as a terminator.
         int convertedChars = MultiByteToWideChar(CP_UTF8, 0, window->windowTitle, -1, *dest, windowTitleMBCharCount);
 
         if (convertedChars <= 0) {
-                allocator.rtEW_free((void*)dest, allocator.usr);
+                allocator.rtEW_free((void**)dest, allocator.usr);
                 *dest = nullptr;
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
@@ -230,7 +225,6 @@ static enum rtEErrorCode createWindowWindowHandle(struct rtEngineWindow* window)
         }
 
         if (window->windowHandle == NULL) {
-                // TODO: Not sure if windowPtr and window occupy the same memory location. 
                 printf("NULL WINDOW HANDLKE");
                 printf("GET LAST ERROR: %lu", GetLastError());
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;

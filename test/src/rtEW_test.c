@@ -24,7 +24,6 @@ static void customFree(void** ptr, void* usr) {
 }
 
 RTEST_SUITE_BEGIN("rtEW Tests") {
-/*
         RTEST_CASE("The module can start and cleanup without error") {
                 RTEST_ASSERT(rtEW_init() == rtEErrorCode_SUCCESS);
 
@@ -104,7 +103,7 @@ RTEST_SUITE_BEGIN("rtEW Tests") {
         }
 
         rtEW_cleanup();
-*/
+
         RTEST_CASE("A custom allocator can be used for rtEW allocations") {
                 struct rtEMemoryManager* manager;
                 struct rtEMMStackAllocator* stallocator;
@@ -113,8 +112,8 @@ RTEST_SUITE_BEGIN("rtEW Tests") {
 
                // char* string = customMalloc(25, stallocator);
                // strcpy(string, "contains 25 chars.......");
-                int* fart = customMalloc(sizeof(int), stallocator);
-                *fart = INT_MAX;
+                int* test = customMalloc(sizeof(int), stallocator);
+                *test = INT_MAX;
 
 
                 struct rtEW_Allocator allocator = {
