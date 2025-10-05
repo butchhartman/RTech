@@ -1,6 +1,7 @@
 #ifndef RTEST_H_
 #define RTEST_H_
 #include <stdio.h>
+#include <time.h>
 // TODO: Add a RTEST_MANUAL_CASE macro which will prompt the user to see if functionality is working
 
 /**
@@ -12,6 +13,18 @@
 * @warning
 * It has not been tested, but is likely that including headers after this one may cause issues.
 */
+
+#define RTEST_BENCHMARK_RUN(testname) \
+for ( \
+        struct { \
+                bool testCaseRan; \
+                const char* testName; \
+                double clk; \
+        } testy = {false, (testname), (double)clock()/CLOCKS_PER_SEC}; \
+        !testy.testCaseRan; \
+        testy.testCaseRan = true, totalTests++, printf("%s timing benchmark ran. Process took %f seconds\n", testname, (double)clock()/CLOCKS_PER_SEC-testy.clk) \
+) \
+
 
 /**
 * Initializes state used for managing tests

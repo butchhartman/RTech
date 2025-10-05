@@ -8,7 +8,7 @@
 #include <string.h>
 
 static enum rtEErrorCode rtEMM_findBlockIter(struct rtEMemoryManager* manager, unsigned char** block, uint64_t blockSize, unsigned char* bufferPtr) {
-        printf("iter\n");
+//        printf("iter\n");
         if (bufferPtr >= (manager->buff + manager->buffSize)) {
                 printf("fail\n");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
@@ -16,12 +16,12 @@ static enum rtEErrorCode rtEMM_findBlockIter(struct rtEMemoryManager* manager, u
 
         uint64_t headerBlockSize = GET_BUFFER_SIZE(bufferPtr);
         uint64_t headerBlockOccupied = GET_BUFFER_IS_OCCUPIED(bufferPtr);
-        printf("found block size: %llu, occupied: %llu\n", headerBlockSize, headerBlockOccupied);
+ //       printf("found block size: %llu, occupied: %llu\n", headerBlockSize, headerBlockOccupied);
 
         if (!headerBlockOccupied && headerBlockSize >= blockSize) {
                 uint64_t deltaM = (bufferPtr - manager->buff);
 
-                printf("delta M: %llu\n", deltaM);
+  //              printf("delta M: %llu\n", deltaM);
                 *block = bufferPtr;
 
                 uint64_t header = blockSize | BUFFER_IS_OCCUPIED_BIT;
@@ -29,7 +29,7 @@ static enum rtEErrorCode rtEMM_findBlockIter(struct rtEMemoryManager* manager, u
                 memcpy(manager->buff + deltaM, &header, IN_BAND_HEADER_SIZE);
 
                 uint64_t newSize = headerBlockSize - blockSize; 
-                printf("ns: %llu\n", newSize);
+//                printf("ns: %llu\n", newSize);
                 if (newSize != 0) {
                         memcpy(manager->buff + deltaM + blockSize + IN_BAND_HEADER_SIZE, &newSize, IN_BAND_HEADER_SIZE);
 //                                *(manager->buff +deltaM + buffActualNeededSize + IN_BAND_HEADER_SIZE + sizeof(uint32_t)) = 0x00;

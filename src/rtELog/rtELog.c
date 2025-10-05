@@ -95,7 +95,7 @@ enum rtEErrorCode rtELog_init(const char* logFileName) {
         fprintf_s(mainLogFile, "RTech - <version>\nCompiled on %s %s\n", __DATE__, __TIME__);
         
         fprintf_s(mainLogFile, "File generated on [%02d/%02d/%d - %02d:%02d:%02d]\n\n", t.tm_mon + 1, t.tm_mday, t.tm_year+1900, t.tm_hour, t.tm_min, t.tm_sec);
-        fflush(mainLogFile);
+ //       fflush(mainLogFile);
         startingTime = clock();
 
         RTELOG_GLOBAL_alloc.rtEA_free((void**)&fullFileName, RTELOG_GLOBAL_alloc.usr);
@@ -116,7 +116,7 @@ void rtELog_log(const char* message, ...) {
         va_end(args);
 
         fprintf_s(mainLogFile, messageBuffer);
-        fflush(mainLogFile);
+//        fflush(mainLogFile);
 
         RTELOG_GLOBAL_alloc.rtEA_free((void**)&messageBuffer, RTELOG_GLOBAL_alloc.usr);
 }

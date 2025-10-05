@@ -12,7 +12,7 @@ enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager* parent, 
         // find empty block
         unsigned char* block = nullptr;
 
-        printf("requested block size: %llu, STACKALLOCSIZE: %llu, needed block size: %llu\n", buffSize, (uint64_t)sizeof(struct rtEMMStackAllocator), buffActualSize);
+//        printf("requested block size: %llu, STACKALLOCSIZE: %llu, needed block size: %llu\n", buffSize, (uint64_t)sizeof(struct rtEMMStackAllocator), buffActualSize);
         enum rtEErrorCode err = rtEMM_findBlock(parent, &block, buffActualSize);
         if (err != rtEErrorCode_SUCCESS) {
                 *child = nullptr;
@@ -69,14 +69,14 @@ enum rtEErrorCode rtEMM_stackMalloc(struct rtEMMStackAllocator* alloc, uint32_t 
         ptrdiff_t shift = alignedMem - mem;
         alignedMem[-1] = (unsigned char)(shift & 0xFF);
 
-        printf("stack alloc of: %llu\n", actualSize);
+ //       printf("stack alloc of: %llu\n", actualSize);
         *dest = alignedMem;
         alloc->top += actualSize;
         return rtEErrorCode_SUCCESS;
 }
 
 enum rtEErrorCode rtEMM_stackFreeTo(struct rtEMMStackAllocator* alloc, void** ptr) {
-        printf("stack free\n");
+//        printf("stack free\n");
 
         unsigned char* alignedMem = *ptr;
 

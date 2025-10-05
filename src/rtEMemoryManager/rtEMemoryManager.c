@@ -25,7 +25,7 @@ enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint6
         }
 
         uint64_t buffSizeWithManager = sizeof(struct rtEMemoryManager) + buffSize + IN_BAND_HEADER_SIZE;
-        printf("BSWM: %llu", buffSizeWithManager);
+//        printf("BSWM: %llu", buffSizeWithManager);
 
         unsigned char* memoryBuffer = malloc(buffSizeWithManager);
 
@@ -37,7 +37,7 @@ enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint6
         memset(memoryBuffer, 0, buffSizeWithManager);
         *obj = (struct rtEMemoryManager*)memoryBuffer;
 
-        printf("buff actual size: %llu\n", buffSize);
+ //       printf("buff actual size: %llu\n", buffSize);
         (*obj)->buff = memoryBuffer + sizeof(struct rtEMemoryManager);
         // Cannot assign to buffer in this way because it implicily converts the whole value to a char. memcpy is needed
 //        *(*obj)->buff = 0xF0F0F0F0;
@@ -50,7 +50,7 @@ enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint6
  //       *((*obj)->buff + sizeof(uint32_t)) = 0x00;
   //      (*obj)->buffSize = buffSize + IN_BAND_HEADER_SIZE;
 
-        printf("extracted block size: %llu, block occupied: %llu\n", GET_BUFFER_SIZE((*obj)->buff), GET_BUFFER_IS_OCCUPIED((*obj)->buff));
+  //      printf("extracted block size: %llu, block occupied: %llu\n", GET_BUFFER_SIZE((*obj)->buff), GET_BUFFER_IS_OCCUPIED((*obj)->buff));
 
         return rtEErrorCode_SUCCESS;
 }
