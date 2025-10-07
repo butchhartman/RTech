@@ -1,4 +1,5 @@
 #include "rtEErrorCodes/rtEErrorCodes.h"
+#include "rtELog/rtELog.h"
 #include <rtEMemoryManager/structs/rtEStackAllocatorStruct.h>
 #include <rtEMemoryManager/procs/rtEMemoryManagerHelperProcs.h>
 #include <stddef.h>
@@ -15,6 +16,7 @@ enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager* parent, 
 //        printf("requested block size: %llu, STACKALLOCSIZE: %llu, needed block size: %llu\n", buffSize, (uint64_t)sizeof(struct rtEMMStackAllocator), buffActualSize);
         enum rtEErrorCode err = rtEMM_findBlock(parent, &block, buffActualSize);
         if (err != rtEErrorCode_SUCCESS) {
+                rtELog_logError("Failed to find a suitably large memory block of %d bytes in memory manager", buffActualSize);
                 *child = nullptr;
                 return err;
         }
@@ -27,6 +29,7 @@ enum rtEErrorCode rtEMM_allocateStackAllocator(struct rtEMemoryManager* parent, 
         (*child)->top = block;
         (*child)->manager = parent;
 
+        rtELog_debug_logInfo("Allocated stack allocator");
         return rtEErrorCode_SUCCESS;
 }
 
@@ -46,14 +49,16 @@ enum rtEErrorCode rtEMM_cleanupStackAllocator(struct rtEMMStackAllocator** alloc
 
         *alloc = nullptr;
 
+        rtELog_debug_logInfo("Cleaned up stack allocator");
         return rtEErrorCode_SUCCESS;
 }
 
-// I'll be honest, I didn't understand alignment until today. Pretty much all this code is from the book.
-// Is there ever a time when I'd want to allocate potentiall unaligned memory? probbles not
+// I'll be honest, I didn't understand alignment until today. Pretty much all this code is from James Gregory's book.
+// Is there ever a time when I'd want to allocate potentially unaligned memory? probbles not
 enum rtEErrorCode rtEMM_stackMalloc(struct rtEMMStackAllocator* alloc, uint32_t size, void** dest) {
         size_t actualSize = size + alignof(max_align_t);
         if (actualSize > (alloc->buffSize - (alloc->buff - alloc->top))) {
+                rtELog_logError("Stack allocator too small (%d bytes total for a %d byte allocation)", alloc->buffSize-(alloc->buff-alloc->top), actualSize);
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -92,7 +97,7 @@ enum rtEErrorCode rtEMM_stackFreeTo(struct rtEMMStackAllocator* alloc, void** pt
 
         return rtEErrorCode_SUCCESS;
 }
-
+/*
 enum rtEErrorCode rtEMM_stackMallocAligned(struct rtEMMStackAllocator* alloc, uint32_t size, void** dest, size_t alignment) {
         size_t actualSize = size + alignment;
         unsigned char* mem;
@@ -111,7 +116,7 @@ enum rtEErrorCode rtEMM_stackMallocAligned(struct rtEMMStackAllocator* alloc, ui
 }
 enum rtEErrorCode rtEMM_stackFreeToAligned(struct rtEMMStackAllocator* alloc, void** ptr, size_t alignment) {
 }
-
+*/
 enum rtEErrorCode rtEMM_dumpBuffer(struct rtEMMStackAllocator* alloc) {
         return rtEMM_dumpBlock("stackdump.dmp", alloc->buff, alloc->buffSize);
 }

@@ -1,7 +1,7 @@
 #include "rtEErrorCodes/rtEErrorCodes.h"
+#include "rtELog/rtELog.h"
 #include <rtEMemoryManager/rtEMemoryManager.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <rtEMemoryManager/macros/rtEMMMacros.h>
@@ -21,6 +21,7 @@ enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint6
         // MSB is reserved for occupied bit, so the range of values is 0-2^63-1, which should be more than enough for at least the next 100 years
         if (buffSize > INT64_MAX) {
                 // TODO: create real error code
+                rtELog_logError("Memory Manager buffer size too large (what are you doing?)");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -31,6 +32,7 @@ enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint6
 
         if (memoryBuffer == nullptr) {
                 *obj = nullptr;
+                rtELog_logError("Memory Manager memory allocation failed");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
         
@@ -52,6 +54,7 @@ enum rtEErrorCode rtEMM_createMemoryManager(struct rtEMemoryManager** obj, uint6
 
   //      printf("extracted block size: %llu, block occupied: %llu\n", GET_BUFFER_SIZE((*obj)->buff), GET_BUFFER_IS_OCCUPIED((*obj)->buff));
 
+        rtELog_debug_logInfo("Allocated a buffer of %d for a memory manager", buffSizeWithManager);
         return rtEErrorCode_SUCCESS;
 }
 
@@ -65,6 +68,8 @@ enum rtEErrorCode rtEMM_cleanupMemoryManager(struct rtEMemoryManager** obj) {
        free(memoryBuffer);
 
        *obj = nullptr;
+
+       rtELog_debug_logInfo("Freed memory manager memory buffer");
 
        return rtEErrorCode_SUCCESS;
 }

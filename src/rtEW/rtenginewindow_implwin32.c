@@ -59,6 +59,7 @@ static enum rtEErrorCode registerWindowClass() {
 
         ATOM identifier = RegisterClass(&rtEWWindowClass);
         // TODO: Replace with a more relevant error code
+        rtELog_logInfo("Registered window class");
         return (identifier != 0) ? rtEErrorCode_SUCCESS : rtEErrorCode_MEMORY_ALLOC_FAILURE;
 }
 
@@ -74,6 +75,7 @@ static enum rtEErrorCode initializeWindowMemory(struct rtEngineWindow** window, 
         *window = RTEW_GLOBAL_alloc.rtEA_malloc(sizeof(struct rtEngineWindow), RTEW_GLOBAL_alloc.usr);
 
         if (*window == nullptr) {
+                rtELog_logError("Failed to initialize window memory");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -81,6 +83,7 @@ static enum rtEErrorCode initializeWindowMemory(struct rtEngineWindow** window, 
 
         if ((*window)->windowTitle == nullptr) {
                 RTEW_GLOBAL_alloc.rtEA_free((void**)window, RTEW_GLOBAL_alloc.usr);
+                rtELog_logError("Failed to initialize window memory");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -103,6 +106,7 @@ static enum rtEErrorCode initWindowAndSemaphoreStruct(struct windowAndSemaphore*
         );
 
         if (windowAndSemaphore->semaphore == nullptr) {
+                rtELog_logError("Failed to create windowANDSemaphore struct");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -121,15 +125,14 @@ static enum rtEErrorCode createWin32WorkerThread(struct rtEngineWindow* window, 
 
         if (window->msgLoopThread == nullptr) {
                 CloseHandle(windowAndSemaphore->semaphore);
+                rtELog_logError("Failed to create window thread");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
         // Waits for the dispatched worker thread to finish window creation and signal the semaphore
-        rtELog_logInfo("Waiting for worker thread to signal semaphore");
-        printf("waiting for semaphore");
+        rtELog_debug_logInfo("Waiting for worker thread to signal semaphore");
         WaitForSingleObject(windowAndSemaphore->semaphore, INFINITE);
-        printf("semaphorehit");
-        rtELog_logInfo("Worker thread signaled semaphore, continuing");
+        rtELog_debug_logInfo("Worker thread signaled semaphore, continuing");
 
         // TODO: This function can fail, consider error checking in some form
         CloseHandle(windowAndSemaphore->semaphore);
@@ -137,7 +140,7 @@ static enum rtEErrorCode createWin32WorkerThread(struct rtEngineWindow* window, 
         if (windowAndSemaphore->workerThreadSuccess != true) {
                 // TODO: More relevant error code 
                 CloseHandle(window->msgLoopThread);
-                printf("Worker thread did not succeed");
+                rtELog_logError("Worker thread did not report success");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -167,14 +170,14 @@ static enum rtEErrorCode dispatchWin32WorkerThread(struct rtEngineWindow* window
 static enum rtEErrorCode convertWindowTitleToUnicode(struct rtEngineWindow* window, wchar_t** dest) {
         int windowTitleMBCharCount= MultiByteToWideChar(CP_UTF8, 0, window->windowTitle, -1, NULL, 0);
         if (windowTitleMBCharCount <= 0) {
+                rtELog_logWarning("Failed to get window title unicode length");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
         *dest = RTEW_GLOBAL_alloc.rtEA_malloc(windowTitleMBCharCount * sizeof(wchar_t), RTEW_GLOBAL_alloc.usr);
 
-        printf("WCHART SIZE: %d", windowTitleMBCharCount*sizeof(wchar_t));
-
         if (*dest == nullptr) {
+                rtELog_logWarning("Unicode window title memory allocation failed");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -185,6 +188,7 @@ static enum rtEErrorCode convertWindowTitleToUnicode(struct rtEngineWindow* wind
         if (convertedChars <= 0) {
                 RTEW_GLOBAL_alloc.rtEA_free((void**)dest, RTEW_GLOBAL_alloc.usr);
                 *dest = nullptr;
+                rtELog_logWarning("Failed to convert window title to unicode");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -195,7 +199,6 @@ static enum rtEErrorCode createWindowWindowHandle(struct rtEngineWindow* window)
         enum rtEErrorCode err;
         wchar_t* unicodeWindowName;
         err = convertWindowTitleToUnicode(window, &unicodeWindowName);
-        printf("UNICODE NAME: %ls\n", unicodeWindowName);
 
         window->windowHandle = CreateWindowEx(
                 0,
@@ -211,13 +214,11 @@ static enum rtEErrorCode createWindowWindowHandle(struct rtEngineWindow* window)
         );
 
         if (err == rtEErrorCode_SUCCESS) {
-                printf("succ");
                 RTEW_GLOBAL_alloc.rtEA_free((void**)(&unicodeWindowName), RTEW_GLOBAL_alloc.usr);
         }
 
         if (window->windowHandle == NULL) {
-                printf("NULL WINDOW HANDLKE");
-                printf("GET LAST ERROR: %lu", GetLastError());
+                rtELog_logError("Failed to create window handle");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -231,6 +232,7 @@ static enum rtEErrorCode createWindowShouldCloseMutex(struct rtEngineWindow* win
                 NULL);
 
         if (window->shouldCloseMutex == nullptr) {
+                rtELog_debug_logError("Failed to create should close mutex");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
@@ -252,20 +254,22 @@ enum rtEErrorCode rtEW_createWindow(struct rtEngineWindow** window, const char* 
         enum rtEErrorCode err = initializeWindowMemory(window, windowTitle);
 
         if (err != rtEErrorCode_SUCCESS) {
+                rtELog_debug_logError("Failed to create window");
                 return err;
         }
 
-        printf("we have memory");
 
         err = dispatchWin32WorkerThread(*window);
 
         if (err != rtEErrorCode_SUCCESS) {
                 RTEW_GLOBAL_alloc.rtEA_free((void**)&(*window)->windowTitle, RTEW_GLOBAL_alloc.usr);
                 RTEW_GLOBAL_alloc.rtEA_free((void**)window, RTEW_GLOBAL_alloc.usr);
+                rtELog_debug_logError("Failed to create window");
                 return err;
         }
 
-        printf("we have worker thread");
+
+        rtELog_debug_logInfo("Successfully created window");
 
         return rtEErrorCode_SUCCESS;
 }
@@ -288,21 +292,19 @@ DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore) {
                 ReleaseSemaphore(semaphore, 1, NULL);
                 return EXIT_FAILURE; 
         }
-        printf("Created MUTEX");
-
 
         // Notifies main thread that it can stop waiting and return the create window function.
         ReleaseSemaphore(semaphore, 1, NULL);
         // Semaphore is void after this line
         // The semaphore AND window struct is also void after this line (heap dealloc)
-        rtELog_logInfo("Beginning message Loop");
+        rtELog_debug_logInfo("Beginning message Loop");
         MSG msg = { };
         while (GetMessage(&msg, NULL, 0, 0) > 0 && windowPtr->shouldClose == false) {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
         }
 
-        printf("Message Loop termination");
+        rtELog_debug_logInfo("Beginning message Loop");
         
         WaitForSingleObject(windowPtr->shouldCloseMutex, INFINITE);
         windowPtr->shouldClose = true;
