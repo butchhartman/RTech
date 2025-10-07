@@ -25,3 +25,4 @@ endfunction()
 
 set(RTECH_ONLY_TEST_SOURCES 1)
 addBenchmark(src/rtELog_bench.c)
+addBenchmark(src/rtELogLongStrings_bench.c)

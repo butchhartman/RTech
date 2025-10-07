@@ -14,17 +14,16 @@
 * It has not been tested, but is likely that including headers after this one may cause issues.
 */
 
-#define RTEST_BENCHMARK_RUN(testname) \
+#define RTEST_BENCHMARK_RUN(testname, trials) \
 for ( \
         struct { \
-                bool testCaseRan; \
+                size_t i; \
                 const char* testName; \
                 double clk; \
-        } testy = {false, (testname), (double)clock()/CLOCKS_PER_SEC}; \
-        !testy.testCaseRan; \
-        testy.testCaseRan = true, totalTests++, printf("%s timing benchmark ran. Process took %f seconds\n", testname, (double)clock()/CLOCKS_PER_SEC-testy.clk) \
+        } testy = {0, (testname), (double)clock()/CLOCKS_PER_SEC}; \
+        testy.i < trials; \
+        testy.i++, totalTests++, (testy.i == trials) ? printf("%s timing benchmark ran. Process took average of %f seconds\n", testname, ((double)clock()/CLOCKS_PER_SEC-testy.clk)/trials) : 0\
 ) \
-
 
 /**
 * Initializes state used for managing tests
