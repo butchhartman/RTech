@@ -92,7 +92,7 @@ enum rtEErrorCode rtELog_init(const char* logFileName) {
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
 
-        fprintf_s(mainLogFile, "RTech - <version>\nCompiled on %s %s\n", __DATE__, __TIME__);
+        fprintf_s(mainLogFile, "RTech - version %s\nCompiled on %s %s\n",RTECH_VERSION, __DATE__, __TIME__);
         
         fprintf_s(mainLogFile, "File generated on [%02d/%02d/%d - %02d:%02d:%02d]\n\n", t.tm_mon + 1, t.tm_mday, t.tm_year+1900, t.tm_hour, t.tm_min, t.tm_sec);
  //       fflush(mainLogFile);

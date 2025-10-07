@@ -6,9 +6,11 @@ cmake_minimum_required(VERSION 4.1.1)
 option(BUILD_TESTS "Build all test suites" OFF)
 
 project(RTech
-        VERSION 1.0.0
-        DESCRIPTION "A 3D voxel game about technological progression"
+        VERSION 0.1.0
+        DESCRIPTION "A game about technological progression"
         LANGUAGES C)
+set(RTECH_DEVELOPMENT_STAGE "pre-alpha")
+add_compile_definitions(RTECH_VERSION="${CMAKE_PROJECT_VERSION}-${RTECH_DEVELOPMENT_STAGE}")
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED True)
