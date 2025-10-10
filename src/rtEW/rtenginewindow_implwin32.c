@@ -304,12 +304,9 @@ DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore) {
                 DispatchMessage(&msg);
         }
 
-        rtELog_debug_logInfo("Beginning message Loop");
+        rtELog_debug_logInfo("Ending message Loop");
         
-        WaitForSingleObject(windowPtr->shouldCloseMutex, INFINITE);
         windowPtr->shouldClose = true;
-        ReleaseMutex(windowPtr->shouldCloseMutex);
-
         return EXIT_SUCCESS;
 }
 
@@ -338,11 +335,9 @@ enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow** window) {
         // TODO:
         // You're really not supposed to use terminate thread, but setting should close did not cause the thread to exit because GetMessage blocks. I dont know what to do as of now, because I can't pump the queue from here since it is on a separate thread.
         windowPtr->shouldClose = true;
-        TerminateThread(windowPtr->msgLoopThread, 0);
         WaitForSingleObject(windowPtr->msgLoopThread, INFINITE);
         rtELog_log("Win32 worker thread exited; freeing resources");
         CloseHandle(windowPtr->msgLoopThread);
-        DestroyWindow(windowPtr->windowHandle);
         CloseHandle(windowPtr->msgLoopThread);
         CloseHandle(windowPtr->shouldCloseMutex);
 
@@ -355,19 +350,26 @@ enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow** window) {
 
 bool rtEW_windowShouldClose(const struct rtEngineWindow* window) {
         // Does this really need a mutex?
-        WaitForSingleObject(window->shouldCloseMutex, INFINITE);
+        // I removed it here because the msg loop constantly taking control of the mutex will throttle the main loop speed
         bool returnShouldClose = window->shouldClose;
-        ReleaseMutex(window->shouldCloseMutex);
         return returnShouldClose;
 }
 
 void rtEW_setWindowShouldClose(struct rtEngineWindow* window) {
         // Does this really need a mutex?
+//        WaitForSingleObject(window->shouldCloseMutex, INFINITE);
         window->shouldClose = true;
+ //       ReleaseMutex(window->shouldCloseMutex);
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         switch (uMsg) {
+                // The microsoft approved way to handle window exiting
+                case WM_CLOSE:
+                        if (MessageBox(hwnd, L"Are you sure you want to quit?", L"Confirm", MB_YESNO) == IDYES) {
+                                assert(DestroyWindow(hwnd) != 0);
+                        }
+                        return 0;
                 case WM_DESTROY:
                         PostQuitMessage(0);
                         return 0;
