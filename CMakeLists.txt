@@ -17,9 +17,12 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 add_executable(${PROJECT_NAME})
 
-find_package(Vulkan)
+find_package(Vulkan REQUIRED)
 
-target_include_directories(${PROJECT_NAME} PRIVATE src "$ENV{VULKAN_SDK_PATH}/include")
+target_include_directories(${PROJECT_NAME} PRIVATE 
+        src 
+        "$ENV{VK_SDK_PATH}/Include"
+        )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
 

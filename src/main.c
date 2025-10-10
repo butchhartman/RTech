@@ -1,6 +1,7 @@
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtELog/rtELog.h" 
 #include "rtEW/rtenginewindow.h"
+#include "rtERenderer/rtERenderer.h"
 #include <stdlib.h>
 
 // TODO: See about getting tests set up
@@ -15,6 +16,12 @@ int main() {
         struct rtEngineWindow* window;
         if (rtEW_createWindow(&window, "RTech") != rtEErrorCode_SUCCESS) {
                 rtELog_logError("Failed to create rtEWindow");
+                return EXIT_FAILURE;
+        }
+
+        struct rtERenderer* renderer;
+        if (rtER_initializeRenderer(&renderer, RENDERER_IMPL_ID_VULKAN) != rtEErrorCode_SUCCESS) {
+                rtELog_logError("Failed to initialize renderer");
                 return EXIT_FAILURE;
         }
 

@@ -13,7 +13,12 @@ function(addTestSuite file)
 
         add_executable(${PROJECT_NAME} ${file})
 
-        target_include_directories(${PROJECT_NAME} PRIVATE ../src)
+        target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
+
+        target_include_directories(${PROJECT_NAME} PRIVATE 
+        ../src
+        "$ENV{VK_SDK_PATH}/Include"
+        )
 
         add_subdirectory(${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR}/RTech_Test_Suite_${TEST_SUITE_NAME})
 
