@@ -11,4 +11,5 @@ struct rtERenderer;
 
 enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** renderer, enum rendererImplementationID implID);
 
+enum rtEErrorCode rtER_cleanupRenderer(struct rtERenderer** renderer);
 #endif // RTERENDERER_H_
