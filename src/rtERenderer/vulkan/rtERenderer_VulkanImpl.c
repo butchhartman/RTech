@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <vulkan/vulkan.h>
 #include <stdlib.h>
 
@@ -16,12 +17,9 @@ do { \
 } while(0) \
 
 #define NO_VK_FLAGS 0
+#define ARRAY_SIZE(array) \
+        (sizeof(array) / sizeof(array[0]))
 
-static const char* instanceExtensions[] = { 
-        VK_EXT_DEBUG_UTILS_EXTENSION_NAME 
-}; 
-static_assert(sizeof(instanceExtensions) / sizeof(const char*) == 1);
-#define NUM_INSTANCE_EXTENSIONS (sizeof(instanceExtensions) / sizeof(const char*))
 struct rtER_VulkanImpl { 
         uint32_t apiVersion; 
         VkInstance instance;
@@ -37,12 +35,126 @@ VkBool32 VKAPI_PTR debugCallback(
         (void)messageSeverity;
         (void)messageTypes;
         (void)pUserData;
+
         rtELog_logWarning("%s", pCallbackData->pMessage);
 /*
 This function should always return VK_FALSE as per the spec:
 https://docs.vulkan.org/spec/latest/chapters/debugging.html#PFN_vkDebugUtilsMessengerCallbackEXT
 */
         return VK_FALSE;
+}
+
+
+
+static VkBool32 checkValidationLayerSupport(const char** requiredValidationLayers, uint32_t numRequiredLayers) {
+        uint32_t numSupportedLayers;
+        VK_ERROR_LOG_AND_RETURN(
+                vkEnumerateInstanceLayerProperties(
+                        &numSupportedLayers,
+                        nullptr
+                ),
+                "Failed to enumerate instance layer properties"
+        );
+
+        VkLayerProperties* layerPropertiesArray = malloc(sizeof(VkLayerProperties) * numSupportedLayers);
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkEnumerateInstanceLayerProperties(
+                        &numSupportedLayers,
+                        layerPropertiesArray 
+                ),
+                "Failed to enumerate instance layer properties"
+        );
+
+
+        for(size_t i = 0; i < numRequiredLayers; i++) {
+                bool requiredLayerSupported = false;
+                for(size_t j = 0; j < numSupportedLayers; j++) {
+                        if (strcmp(requiredValidationLayers[i], layerPropertiesArray[j].layerName) == 0) {
+                                requiredLayerSupported = true;
+                        }
+                                
+                }
+
+                if (!requiredLayerSupported) {
+                        free(layerPropertiesArray);
+                        return VK_FALSE;
+                }
+
+        }
+        
+        #ifndef NDEBUG
+                rtELog_debug_logInfo("Required Validation Layers:");
+
+               for(size_t i = 0; i < numRequiredLayers; i++) {
+                       rtELog_debug_logInfo("\t%s", requiredValidationLayers[i]);
+               }
+
+               rtELog_debug_logInfo("Supported Validation Layers:");
+
+                for(size_t j = 0; j < numSupportedLayers; j++) {
+                       rtELog_debug_logInfo("\t%s", layerPropertiesArray[j].layerName);
+                }
+
+        #endif
+
+
+        free(layerPropertiesArray);
+        rtELog_debug_logInfo("All required validation layers supported");
+        return VK_TRUE;
+}
+
+static VkBool32 checkInstanceExtensionSupport(const char** requiredInstanceExtensions, uint32_t numRequiredInstanceExtensions) {
+        uint32_t numSupportedInstanceExtensions;
+        if (vkEnumerateInstanceExtensionProperties(nullptr, &numSupportedInstanceExtensions, nullptr) < 0) {
+                rtELog_logError("Failed to enumerate instance extension properties");
+                return VK_FALSE;
+        }
+
+        struct VkExtensionProperties* supportedExtensions = malloc(sizeof(struct VkExtensionProperties) * numSupportedInstanceExtensions);
+
+        if (vkEnumerateInstanceExtensionProperties(nullptr, &numSupportedInstanceExtensions, supportedExtensions) < 0) {
+                rtELog_logError("Failed to enumerate instance extension properties");
+                free(supportedExtensions);
+                return VK_FALSE;
+        }
+
+        for(size_t i = 0; i < numRequiredInstanceExtensions; i++) {
+                bool extensionSupported = false;
+                for(size_t j = 0; j < numSupportedInstanceExtensions; j++) {
+                        if (strcmp(requiredInstanceExtensions[i], supportedExtensions[j].extensionName) == 0) {
+                                extensionSupported = true;
+                        }
+                                
+                }
+
+                if (!extensionSupported) {
+                        free(supportedExtensions);
+                        return VK_FALSE;
+                }
+
+        }
+
+        #ifndef NDEBUG
+                rtELog_debug_logInfo("Required Instance Extensions:");
+
+               for(size_t i = 0; i < numRequiredInstanceExtensions; i++) {
+                       rtELog_debug_logInfo("\t%s", requiredInstanceExtensions[i]);
+               }
+
+               rtELog_debug_logInfo("Supported Instance Extensions:");
+
+                for(size_t j = 0; j < numSupportedInstanceExtensions; j++) {
+                       rtELog_debug_logInfo("\t%s", supportedExtensions[j].extensionName);
+                }
+
+        #endif
+
+
+
+        free(supportedExtensions);
+        rtELog_debug_logInfo("All required instance extensions supported");
+        return VK_TRUE;
 }
 
 static VkDebugUtilsMessengerCreateInfoEXT getDebugMessengerCreateInfo() {
@@ -59,8 +171,19 @@ static VkDebugUtilsMessengerCreateInfoEXT getDebugMessengerCreateInfo() {
 }
 
 
-static enum VkResult createVKInstance(VkInstance* dest, uint32_t* apiVersionDest) {
+static enum VkResult createVKInstance(VkInstance* dest, uint32_t* apiVersionDest, const char** requiredInstanceExtensions, uint32_t numRequiredInstanceExtensions, const char** requiredLayers, uint32_t numRequiredLayers) {
         assert(dest != nullptr);
+        #ifndef NDEBUG
+        if (!checkValidationLayerSupport(requiredLayers, numRequiredLayers)) {
+                rtELog_logError("One or more required validation layers not supported");
+                return VK_ERROR_LAYER_NOT_PRESENT;
+        }
+        #endif
+
+        if (!checkInstanceExtensionSupport(requiredInstanceExtensions, numRequiredInstanceExtensions)) {
+                rtELog_logError("One or more required instance extensions not supported");
+                return VK_ERROR_EXTENSION_NOT_PRESENT;
+        }
 
         VK_ERROR_LOG_AND_RETURN(vkEnumerateInstanceVersion(apiVersionDest), "Failed to enumerate instance version. This should not happen.");
 
@@ -86,10 +209,15 @@ static enum VkResult createVKInstance(VkInstance* dest, uint32_t* apiVersionDest
                 .pNext = &dbmsgCreateInfo,
                 .flags = NO_VK_FLAGS,
                 .pApplicationInfo = &applicationInfo,
-                .enabledLayerCount = 0, // temp
-                .ppEnabledLayerNames = nullptr,
-                .enabledExtensionCount = NUM_INSTANCE_EXTENSIONS,
-                .ppEnabledExtensionNames = instanceExtensions 
+                #ifndef NDEBUG
+                        .enabledLayerCount = numRequiredLayers,
+                        .ppEnabledLayerNames = requiredLayers,
+                #else
+                        .enabledLayerCount = 0,
+                        .ppEnabledLayerNames = nullptr,
+                #endif
+                .enabledExtensionCount = numRequiredInstanceExtensions,
+                .ppEnabledExtensionNames = requiredInstanceExtensions 
         };
 
         VK_ERROR_LOG_AND_RETURN(vkCreateInstance(&createInfo, nullptr, dest), "Failed to create Vulkan instance");
@@ -102,30 +230,11 @@ static enum VkResult createVKInstance(VkInstance* dest, uint32_t* apiVersionDest
 static enum VkResult createDebugMessenger(VkDebugUtilsMessengerEXT* dest, VkInstance instance) {
         PFN_vkCreateDebugUtilsMessengerEXT pfnCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 
-        PFN_vkSubmitDebugUtilsMessageEXT pfnSubmitDebugUtilsMessageEXT = (PFN_vkSubmitDebugUtilsMessageEXT)vkGetInstanceProcAddr(instance, "vkSubmitDebugUtilsMessageEXT");
-        
         struct VkDebugUtilsMessengerCreateInfoEXT createInfo = getDebugMessengerCreateInfo();
 
         VK_ERROR_LOG_AND_RETURN(pfnCreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, dest), "Failed to create debug messenger");
 
         rtELog_debug_logInfo("Created debug messenger");
-
-        struct VkDebugUtilsMessengerCallbackDataEXT poop = {
-                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CALLBACK_DATA_EXT,
-                .pNext = nullptr,
-                .flags = 0,        
-                .pMessageIdName = nullptr,
-                .messageIdNumber = 0,
-                .pMessage = "Debug Callback Test",
-                .queueLabelCount = 0,
-                .pQueueLabels = nullptr,
-                .cmdBufLabelCount = 0,
-                .pCmdBufLabels = nullptr,
-                .objectCount = 0,
-                .pObjects = nullptr
-         };
-
-        pfnSubmitDebugUtilsMessageEXT(instance,VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT, VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT, &poop);
 
         return VK_SUCCESS;
 }
@@ -134,11 +243,20 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest) {
         assert(dest != nullptr);
         assert(*dest != nullptr);
 
+        // TODO: Maybe read these from a file or something? here works fine for now
+        const char* requiredInstanceExtensions[] = { 
+                VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+        }; 
+
+        const char* requiredValidationLayers[] = {
+                "VK_LAYER_KHRONOS_validation"
+        };
+
         *dest = malloc(sizeof(struct rtER_VulkanImpl));
 
         rtELog_debug_logInfo("Allocated memory for rtER_VulkanImpl in the impl pointer of rtERenderer");
 
-        createVKInstance(&(*dest)->instance, &(*dest)->apiVersion);
+        createVKInstance(&(*dest)->instance, &(*dest)->apiVersion, requiredInstanceExtensions, ARRAY_SIZE(requiredInstanceExtensions), requiredValidationLayers, ARRAY_SIZE(requiredValidationLayers));
         createDebugMessenger(&(*dest)->debugMessenger, (*dest)->instance);
 
         return rtEErrorCode_SUCCESS;
