@@ -3,6 +3,7 @@
 #include "rtELog/rtELog.h"
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <vulkan/vulkan.h>
 #include <stdlib.h>
 
@@ -33,7 +34,6 @@ VkBool32 VKAPI_PTR debugCallback(
         const struct VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
         void* pUserData) {
 
-        // The error is in here. Whenever it tries to report an error, this breaks.
         (void)messageSeverity;
         (void)messageTypes;
         (void)pUserData;
@@ -64,7 +64,7 @@ static enum VkResult createVKInstance(VkInstance* dest, uint32_t* apiVersionDest
 
         VK_ERROR_LOG_AND_RETURN(vkEnumerateInstanceVersion(apiVersionDest), "Failed to enumerate instance version. This should not happen.");
 
-        if (VK_API_VERSION_MINOR(apiVersionDest) < 4) {
+        if (VK_API_VERSION_MINOR(*apiVersionDest) < 4) {
                 rtELog_logError("Required Vulkan version 1.4 not supported");
                 return VK_ERROR_INCOMPATIBLE_DRIVER;
         }

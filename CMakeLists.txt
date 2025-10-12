@@ -43,7 +43,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
 add_subdirectory(src)
 
 target_compile_options(${PROJECT_NAME} PRIVATE
-        $<$<CONFIG:Debug>:-Wall -Wextra -Wpedantic -gdwarf -g -g3 -O0>)
+        $<$<CONFIG:Debug>:-Werror -Wall -Wextra -Wpedantic -gdwarf -g -g3 -O0>)
 
 if (WIN32)
         # adds compiler options to remove the console on windows. the LINKER: prefix makes it portable across compilers
