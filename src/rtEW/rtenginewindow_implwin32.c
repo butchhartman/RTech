@@ -367,7 +367,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                 // The microsoft approved way to handle window exiting
                 case WM_CLOSE:
                         if (MessageBox(hwnd, L"Are you sure you want to quit?", L"Confirm", MB_YESNO) == IDYES) {
-                                assert(DestroyWindow(hwnd) != 0);
+                                if (DestroyWindow(hwnd) == 0) {
+                                        rtELog_debug_logError("HWND destruction failed somehow?");
+                                }
                         }
                         return 0;
                 case WM_DESTROY:
