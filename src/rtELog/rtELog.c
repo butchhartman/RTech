@@ -45,7 +45,8 @@ static char* helper_createLogMessage(const char* message, va_list args){
         char* messageBuffer = RTELOG_GLOBAL_alloc.rtEA_malloc(sizeof(char) * timeStringSize, RTELOG_GLOBAL_alloc.usr);
         memset(messageBuffer, 0, sizeof(char) * timeStringSize);
         snprintf(messageBuffer, timeStringSize, "[%02d:%02d:%02d] -- ", hours, minutes, seconds); 
-        strcat_s(messageBuffer, timeStringSize, message);
+        //strcat_s(messageBuffer, timeStringSize, message);
+        vsnprintf(messageBuffer + (timeStringSize - formattedMessageSize - 2), formattedMessageSize, message, args);
         strcat_s(messageBuffer, timeStringSize, "\n");
 
         return messageBuffer;

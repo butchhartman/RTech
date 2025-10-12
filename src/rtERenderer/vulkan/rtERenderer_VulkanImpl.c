@@ -37,7 +37,7 @@ VkBool32 VKAPI_PTR debugCallback(
         (void)messageSeverity;
         (void)messageTypes;
         (void)pUserData;
-        rtELog_log(pCallbackData->pMessage);
+        rtELog_logWarning("%s", pCallbackData->pMessage);
 /*
 This function should always return VK_FALSE as per the spec:
 https://docs.vulkan.org/spec/latest/chapters/debugging.html#PFN_vkDebugUtilsMessengerCallbackEXT
