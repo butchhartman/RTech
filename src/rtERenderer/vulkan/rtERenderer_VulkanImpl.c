@@ -19,6 +19,7 @@ struct rtER_VulkanImpl {
         VkInstance instance;
         VkDebugUtilsMessengerEXT debugMessenger;
         VkSurfaceKHR surface;
+        VkPhysicalDevice physDevice;
 };
 
  
@@ -61,6 +62,12 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 &(*dest)->surface, 
                 (*dest)->instance, 
                 (*dest)->window
+                );
+
+        rtER_VK_getSuitablePhysicalDevice(
+                &(*dest)->physDevice,
+                (*dest)->instance,
+                (*dest)->surface
                 );
 
         return rtEErrorCode_SUCCESS;

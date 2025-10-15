@@ -388,6 +388,7 @@ enum VkResult rtEW_VK_createSurface(
         rtELog_debug_logInfo("Created win32 surface");
         return VK_SUCCESS;
 }
+#undef VK_USE_PLATFORM_WIN32_KHR
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         switch (uMsg) {

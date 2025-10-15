@@ -1,4 +1,6 @@
+#include <stdlib.h>
 #include <assert.h>
+#include <stdint.h>
 #include "rtELog/rtELog.h"
 #include "rtERenderer/vulkan/creation/rtER_VK_infoCreation.h"
 #include "rtERenderer/vulkan/debug/checkValidationLayerSupport.h"
@@ -104,4 +106,111 @@ enum VkResult rtER_VK_createDebugMessenger(
         rtELog_debug_logInfo("Created debug messenger");
 
         return VK_SUCCESS;
+}
+
+// returns allocated memory that the caller is responsible for freeing. sets count to array size
+static VkQueueFamilyProperties2* getQueueFamilyProperties(VkPhysicalDevice physDevice, uint32_t* count) {
+        vkGetPhysicalDeviceQueueFamilyProperties2(physDevice, count, nullptr);
+
+        VkQueueFamilyProperties2* queueFamilyProperties = malloc(sizeof(VkQueueFamilyProperties2) * *count);
+        for (size_t i = 0; i < *count; i++) {
+                queueFamilyProperties[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
+                queueFamilyProperties[i].pNext = nullptr;
+        }
+
+        vkGetPhysicalDeviceQueueFamilyProperties2(physDevice, count, queueFamilyProperties);
+
+        return queueFamilyProperties;
+}
+
+// (tail) Recursively checks each individual queue flag for a queue which supports it.
+static bool physicalDeviceHasQueueFamilies(
+        VkPhysicalDevice physDevice,
+        VkQueueFlagBits* neededQueueFlags
+        ) {
+
+        if (*neededQueueFlags == 0) {
+                return true;
+        }
+        uint32_t numQueueFamilies;
+        VkQueueFamilyProperties2* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
+        // TODO: add more selection criteria parameters if I ever care about that sort of thing
+
+        vkGetPhysicalDeviceQueueFamilyProperties2(physDevice, &numQueueFamilies, queueFamilyProperties);
+        rtELog_debug_logInfo("Need %d flags", (*neededQueueFlags));
+
+        for (size_t i = 0; i < numQueueFamilies; i++) {
+                if (queueFamilyProperties[i].queueFamilyProperties.queueFlags & *neededQueueFlags) {
+                        (*neededQueueFlags) = (*neededQueueFlags) & ~(queueFamilyProperties[i].queueFamilyProperties.queueFlags & *neededQueueFlags);
+                        free(queueFamilyProperties);
+                        rtELog_debug_logInfo("Found queue family, iterating %d", (*neededQueueFlags));
+                        return physicalDeviceHasQueueFamilies(physDevice, neededQueueFlags);
+                }
+        }
+
+        free(queueFamilyProperties);
+
+        return false;
+}
+
+
+static bool physicalDeviceSupportsPresentation(
+        VkPhysicalDevice physDevice,
+        VkSurfaceKHR surface
+        ) {
+        // TODO: add more selection criteria parameters if I ever care about that sort of thing
+        uint32_t numQueueFamilies;
+        VkQueueFamilyProperties2* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
+
+        for (size_t i = 0; i < numQueueFamilies; i++) {
+                VkBool32 supported = VK_FALSE;
+                vkGetPhysicalDeviceSurfaceSupportKHR(
+                        physDevice,
+                        i,
+                        surface,
+                        &supported
+                        );
+                if (supported == VK_TRUE) {
+                        free(queueFamilyProperties);
+                        return true;
+                }
+        }
+
+        free(queueFamilyProperties);
+
+        return false;
+}
+
+static bool checkPhysicalDeviceSuitability(
+        VkPhysicalDevice physDevice ,
+        VkSurfaceKHR surface
+        ) {
+        
+        VkQueueFlagBits flags = VK_QUEUE_GRAPHICS_BIT;
+
+        return physicalDeviceHasQueueFamilies(physDevice, &flags) && physicalDeviceSupportsPresentation(physDevice, surface);
+}
+
+enum VkResult rtER_VK_getSuitablePhysicalDevice(
+        VkPhysicalDevice* dest,
+        VkInstance instance,
+        VkSurfaceKHR surface
+        ) {
+        uint32_t numPhysDevices;
+        vkEnumeratePhysicalDevices(instance, &numPhysDevices, nullptr);
+
+        VkPhysicalDevice* physicalDevices = malloc(sizeof(VkPhysicalDevice) * numPhysDevices);
+
+        vkEnumeratePhysicalDevices(instance, &numPhysDevices, physicalDevices);
+
+        for (size_t i = 0; i < numPhysDevices; i++) {
+                if (checkPhysicalDeviceSuitability(physicalDevices[i], surface)) {
+                        *dest = physicalDevices[i];
+                        rtELog_debug_logInfo("Found a suitable physical device");
+                        return VK_SUCCESS;
+                }
+        }
+        
+        rtELog_logError("Failed to find a suitable physical device");
+        return VK_ERROR_VALIDATION_FAILED;
 }

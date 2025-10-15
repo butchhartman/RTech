@@ -15,4 +15,11 @@ enum VkResult rtER_VK_createDebugMessenger(
         VkInstance instance, 
         VkDebugUtilsMessengerCreateInfoEXT info);
 
+
+enum VkResult rtER_VK_getSuitablePhysicalDevice(
+        VkPhysicalDevice* dest,
+        VkInstance instance,
+        VkSurfaceKHR surface
+        );
+
 #endif // RTER_VK_OBJECTCREATION_H_
