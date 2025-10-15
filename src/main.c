@@ -20,7 +20,7 @@ int main() {
         }
 
         struct rtERenderer* renderer;
-        if (rtER_initializeRenderer(&renderer, RENDERER_IMPL_ID_VULKAN) != rtEErrorCode_SUCCESS) {
+        if (rtER_initializeRenderer(&renderer, window, RENDERER_IMPL_ID_VULKAN) != rtEErrorCode_SUCCESS) {
                 rtELog_logError("Failed to initialize renderer");
                 return EXIT_FAILURE;
         }

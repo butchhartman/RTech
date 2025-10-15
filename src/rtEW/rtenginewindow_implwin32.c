@@ -362,6 +362,33 @@ void rtEW_setWindowShouldClose(struct rtEngineWindow* window) {
  //       ReleaseMutex(window->shouldCloseMutex);
 }
 
+#define VK_USE_PLATFORM_WIN32_KHR
+#include "rtEW/vulkan/rtEW_VK_createSurface.h"
+#include "rtERenderer/vulkan/macros/rtERendererVKMacros.h"
+
+enum VkResult rtEW_VK_createSurface(
+        VkSurfaceKHR* dest,
+        VkInstance instance,
+        const struct rtEngineWindow* window
+        ) {
+
+        VkWin32SurfaceCreateInfoKHR info = {
+                .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+                .pNext = nullptr,
+                .flags = 0,
+                .hinstance = GetModuleHandle(nullptr),
+                .hwnd = window->windowHandle,
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkCreateWin32SurfaceKHR(instance, &info, nullptr, dest),
+                "Failed to create win32 window surface"
+                );
+
+        rtELog_debug_logInfo("Created win32 surface");
+        return VK_SUCCESS;
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         switch (uMsg) {
                 // The microsoft approved way to handle window exiting

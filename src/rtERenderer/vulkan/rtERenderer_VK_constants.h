@@ -2,6 +2,8 @@
 #define RTERENDERER_VK_CONSTANTS_H_
 
         const char* rtER_VK_requiredInstanceExtensions[] = { 
+                "VK_KHR_surface",
+                "VK_KHR_win32_surface",
                 "VK_EXT_debug_utils",
         }; 
 

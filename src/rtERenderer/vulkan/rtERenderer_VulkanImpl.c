@@ -6,25 +6,31 @@
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtELog/rtELog.h"
 #include "rtERenderer/vulkan/rtERenderer_VK_constants.h"
+#include "rtEW/rtenginewindow.h"
+#include "rtEW/vulkan/rtEW_VK_createSurface.h"
 #include <assert.h>
 #include <stdint.h>
 #include <vulkan/vulkan.h>
 #include <stdlib.h>
 
 struct rtER_VulkanImpl { 
+        struct rtEngineWindow* window;
         uint32_t apiVersion; 
         VkInstance instance;
         VkDebugUtilsMessengerEXT debugMessenger;
+        VkSurfaceKHR surface;
 };
+
  
-enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest) {
+enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, struct rtEngineWindow* window) {
         assert(dest != nullptr);
         assert(*dest != nullptr);
 
-        // TODO: Maybe read these from a file or something? here works fine for now
         *dest = malloc(sizeof(struct rtER_VulkanImpl));
 
         rtELog_debug_logInfo("Allocated memory for rtER_VulkanImpl in the impl pointer of rtERenderer");
+
+        (*dest)->window = window;
 
         rtER_VK_createVKInstance(
                 &(*dest)->instance, 
@@ -49,6 +55,12 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest) {
 
                         rtER_debug_debugCallback
                         )
+                );
+
+        rtEW_VK_createSurface(
+                &(*dest)->surface, 
+                (*dest)->instance, 
+                (*dest)->window
                 );
 
         return rtEErrorCode_SUCCESS;
