@@ -271,7 +271,8 @@ static bool getDeviceQueueCreateInfos(
         VkDeviceQueueCreateInfo** dest,
         uint32_t* queueCreateInfosCount,
         VkQueueFlagBits requiredQueueTypeFlags,
-        VkPhysicalDevice physDevice
+        VkPhysicalDevice physDevice,
+        VkSurfaceKHR* surface
         ) {
         *dest = nullptr;
         *queueCreateInfosCount = 0;
@@ -283,7 +284,7 @@ static bool getDeviceQueueCreateInfos(
                 if (queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags) {
 
                         (*queueCreateInfosCount)++;
-                        *dest = realloc(*dest, sizeof(VkQueueFamilyProperties2) * (*queueCreateInfosCount));
+                        *dest = realloc(*dest, sizeof(VkDeviceQueueCreateInfo) * (*queueCreateInfosCount));
 
                         (*dest)[(*queueCreateInfosCount) - 1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
                         (*dest)[(*queueCreateInfosCount) - 1].pNext = nullptr;
@@ -296,8 +297,45 @@ static bool getDeviceQueueCreateInfos(
 
                         requiredQueueTypeFlags = requiredQueueTypeFlags & ~(queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags);
                         if (requiredQueueTypeFlags == 0) {
-                                free(queueFamilyProperties);
-                                return true;
+                                rtELog_debug_logInfo("Found all required queue bits");
+                                break;
+                        }
+                }
+        }
+
+                VkBool32 presentationSupported = VK_FALSE;
+        if (surface != nullptr) {
+                for (size_t i = 0; i < numQueueFamilies; i++) {
+                        vkGetPhysicalDeviceSurfaceSupportKHR(
+                                physDevice,
+                                i,
+                                *surface,
+                                &presentationSupported
+                                );
+
+                        if (presentationSupported == VK_TRUE) {
+                                bool indexUsed = false;
+                                for (size_t j = 0; j < *queueCreateInfosCount; j++) {
+                                        if ((*dest)[j].queueFamilyIndex == i) {
+                                                rtELog_debug_logInfo("Found a presentation queue, but it does not have a unique index.");
+                                                indexUsed = true;
+                                        }
+                                }
+                                if (!indexUsed) {
+                                        (*queueCreateInfosCount)++;
+                                        *dest = realloc(*dest, sizeof(VkDeviceQueueCreateInfo) * (*queueCreateInfosCount));
+
+                                        (*dest)[(*queueCreateInfosCount) - 1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                                        (*dest)[(*queueCreateInfosCount) - 1].pNext = nullptr;
+                                        (*dest)[(*queueCreateInfosCount) - 1].flags = 0;
+                                        (*dest)[(*queueCreateInfosCount) - 1].queueFamilyIndex = i;
+                                        (*dest)[(*queueCreateInfosCount) - 1].queueCount = 1; // queues will always have at least 1
+                                        float* priority = malloc(sizeof(float));
+                                        *priority = 1.0;
+                                        (*dest)[(*queueCreateInfosCount) - 1].pQueuePriorities = priority;
+                                        rtELog_debug_logInfo("Found a unique presentation queue");
+                                }
+                                break;
                         }
                 }
         }
@@ -305,16 +343,18 @@ static bool getDeviceQueueCreateInfos(
         free(queueFamilyProperties);
         // TODO: add logic to free queue create info array
         // (memory leak)
-        return false;
+        return (surface == nullptr) ? requiredQueueTypeFlags == 0 : requiredQueueTypeFlags == 0 && presentationSupported ;
 }
 // TODO: Fix memory leak and find a way to specify if there needs to a be a queue that supports presentation
 // OPTIONS: Use an unused bit to signift presentation (no)
 //          Wrap vulkan flags in my own flag enum
 //          Add a bool signifying presentation support check <-- probbaly
 //          Assume presentation support is needed because this is a game engine :)
+// SOLUTION: If the surface pointer is nullptr, then it is implied presentation is not wanted. if it is a valid pointer, then it is implied surface support is wanted
 enum VkResult rtER_VK_createLogicalDevice(
         VkDevice* dest,
         VkPhysicalDevice physDevice,
+        VkSurfaceKHR* surface,
         VkQueueFlagBits requiredQueueTypeFlags,
         const char** requiredExtensions,
         uint32_t requiredExtensionsCount
@@ -324,7 +364,7 @@ enum VkResult rtER_VK_createLogicalDevice(
         // create device
         uint32_t queueCreateInfoCount;
         VkDeviceQueueCreateInfo* queueCreateInfos;
-        if (!getDeviceQueueCreateInfos(&queueCreateInfos, &queueCreateInfoCount, requiredQueueTypeFlags, physDevice)) {
+        if (!getDeviceQueueCreateInfos(&queueCreateInfos, &queueCreateInfoCount, requiredQueueTypeFlags, physDevice, surface)) {
                 rtELog_logError("Required queues not supported");
                 return VK_ERROR_INCOMPATIBLE_DRIVER;
         }

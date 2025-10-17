@@ -77,6 +77,7 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
         rtER_VK_createLogicalDevice(
                 &(*dest)->logicalDevice,
                 (*dest)->physDevice,
+                &(*dest)->surface,
                 VK_QUEUE_GRAPHICS_BIT,
                 rtER_VK_requiredDeviceExtensions,
                 ARRAY_SIZE(rtER_VK_requiredDeviceExtensions)

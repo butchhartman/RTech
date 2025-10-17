@@ -30,6 +30,7 @@ enum VkResult rtER_VK_getSuitablePhysicalDevice(
 enum VkResult rtER_VK_createLogicalDevice(
         VkDevice* dest,
         VkPhysicalDevice physDevice,
+        VkSurfaceKHR* surface,
         VkQueueFlagBits requiredQueueTypeFlags,
         const char** requiredExtensions,
         uint32_t requiredExtensionsCount
