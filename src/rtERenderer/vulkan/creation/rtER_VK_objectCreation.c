@@ -259,12 +259,111 @@ enum VkResult rtER_VK_getSuitablePhysicalDevice(
                 if (checkPhysicalDeviceSuitability(physicalDevices[i], surface, requiredQueueFlags, requiredExtensions, requiredExtensionsCount)) {
                         *dest = physicalDevices[i];
                         rtELog_debug_logInfo("Found a suitable physical device");
+                        free(physicalDevices);
                         return VK_SUCCESS;
                 }
         }
         
         rtELog_logError("Failed to find a suitable physical device");
+        free(physicalDevices);
         return VK_ERROR_VALIDATION_FAILED;
+}
+
+static void addDeviceQueueCreateInfoToArray(
+        VkDeviceQueueCreateInfo* dest,
+        uint32_t queueCreateInfosCount,
+        uint32_t queueFamilyIndex
+        ) {
+
+        (dest)[(queueCreateInfosCount) - 1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        (dest)[(queueCreateInfosCount) - 1].pNext = nullptr;
+        (dest)[(queueCreateInfosCount) - 1].flags = 0;
+        (dest)[(queueCreateInfosCount) - 1].queueFamilyIndex = queueFamilyIndex;
+        (dest)[(queueCreateInfosCount) - 1].queueCount = 1; // queues must have at least 1
+        float* priority = malloc(sizeof(float));
+        *priority = 1.0;
+        (dest)[(queueCreateInfosCount) - 1].pQueuePriorities = priority;
+}
+
+static bool addPresentationQueueCreateInfoToArray(
+        VkDeviceQueueCreateInfo** dest,
+        VkPhysicalDevice physDevice,
+        VkSurfaceKHR surface,
+        uint32_t queueFamilyCount,
+        uint32_t* queueCreateInfosCount
+        ) {
+        
+        VkBool32 presentationSupported = VK_FALSE;
+        for (size_t i = 0; i < queueFamilyCount; i++) {
+                vkGetPhysicalDeviceSurfaceSupportKHR(
+                        physDevice,
+                        i,
+                        surface,
+                        &presentationSupported
+                        );
+
+                if (presentationSupported == VK_TRUE) {
+                        bool indexUsed = false;
+                        for (size_t j = 0; j < *queueCreateInfosCount; j++) {
+                                if ((*dest)[j].queueFamilyIndex == i) {
+                                        rtELog_debug_logInfo("Found a presentation queue, but it does not have a unique index.");
+                                        indexUsed = true;
+                                }
+                        }
+                        if (!indexUsed) {
+                                (*queueCreateInfosCount)++;
+                                *dest = realloc(*dest, sizeof(VkDeviceQueueCreateInfo) * (*queueCreateInfosCount));
+
+                                addDeviceQueueCreateInfoToArray(
+                                       *dest,
+                                       *queueCreateInfosCount,
+                                       i
+                                );
+                                rtELog_debug_logInfo("Found a unique presentation queue");
+                        }
+                        break;
+                }
+        }
+
+        return presentationSupported == VK_TRUE;
+}
+
+static bool addQueuesWithFlagsToArray(
+        VkDeviceQueueCreateInfo** dest,
+        uint32_t* queueCreateInfosCount,
+        VkQueueFlagBits requiredQueueTypeFlags,
+        uint32_t numQueueFamilies,
+        VkQueueFamilyProperties2* queueFamilyProperties
+        ) {
+        for (size_t i = 0; i < numQueueFamilies; i++) {
+                if (queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags) {
+
+                        (*queueCreateInfosCount)++;
+                        *dest = realloc(*dest, sizeof(VkDeviceQueueCreateInfo) * (*queueCreateInfosCount));
+
+                        addDeviceQueueCreateInfoToArray(*dest, *queueCreateInfosCount, i);
+
+                        requiredQueueTypeFlags = requiredQueueTypeFlags & ~(queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags);
+                        if (requiredQueueTypeFlags == 0) {
+                                rtELog_debug_logInfo("Found all required queue bits");
+                                break;
+                        }
+                }
+        }
+
+        return requiredQueueTypeFlags == 0;
+}
+
+static void freeDeviceQueueCreateInfos(
+        VkDeviceQueueCreateInfo* ptr,
+        uint32_t queueCreateInfosCount
+        ) {
+
+        for (size_t i = 0; i < queueCreateInfosCount; i++) {
+                free((void*)ptr[i].pQueuePriorities);
+        }
+
+        free(ptr);
 }
 
 static bool getDeviceQueueCreateInfos(
@@ -280,70 +379,29 @@ static bool getDeviceQueueCreateInfos(
         uint32_t numQueueFamilies;
         VkQueueFamilyProperties2* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
 
-        for (size_t i = 0; i < numQueueFamilies; i++) {
-                if (queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags) {
+        bool foundQueuesWithFlags = addQueuesWithFlagsToArray(
+                dest,
+                queueCreateInfosCount,
+                requiredQueueTypeFlags,
+                numQueueFamilies,
+                queueFamilyProperties
+        );
 
-                        (*queueCreateInfosCount)++;
-                        *dest = realloc(*dest, sizeof(VkDeviceQueueCreateInfo) * (*queueCreateInfosCount));
-
-                        (*dest)[(*queueCreateInfosCount) - 1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                        (*dest)[(*queueCreateInfosCount) - 1].pNext = nullptr;
-                        (*dest)[(*queueCreateInfosCount) - 1].flags = 0;
-                        (*dest)[(*queueCreateInfosCount) - 1].queueFamilyIndex = i;
-                        (*dest)[(*queueCreateInfosCount) - 1].queueCount = 1; // queues must have at least 1
-                        float* priority = malloc(sizeof(float));
-                        *priority = 1.0;
-                        (*dest)[(*queueCreateInfosCount) - 1].pQueuePriorities = priority;
-
-                        requiredQueueTypeFlags = requiredQueueTypeFlags & ~(queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags);
-                        if (requiredQueueTypeFlags == 0) {
-                                rtELog_debug_logInfo("Found all required queue bits");
-                                break;
-                        }
-                }
-        }
-
-                VkBool32 presentationSupported = VK_FALSE;
+        bool presentationSupported = false;
         if (surface != nullptr) {
-                for (size_t i = 0; i < numQueueFamilies; i++) {
-                        vkGetPhysicalDeviceSurfaceSupportKHR(
-                                physDevice,
-                                i,
-                                *surface,
-                                &presentationSupported
-                                );
-
-                        if (presentationSupported == VK_TRUE) {
-                                bool indexUsed = false;
-                                for (size_t j = 0; j < *queueCreateInfosCount; j++) {
-                                        if ((*dest)[j].queueFamilyIndex == i) {
-                                                rtELog_debug_logInfo("Found a presentation queue, but it does not have a unique index.");
-                                                indexUsed = true;
-                                        }
-                                }
-                                if (!indexUsed) {
-                                        (*queueCreateInfosCount)++;
-                                        *dest = realloc(*dest, sizeof(VkDeviceQueueCreateInfo) * (*queueCreateInfosCount));
-
-                                        (*dest)[(*queueCreateInfosCount) - 1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-                                        (*dest)[(*queueCreateInfosCount) - 1].pNext = nullptr;
-                                        (*dest)[(*queueCreateInfosCount) - 1].flags = 0;
-                                        (*dest)[(*queueCreateInfosCount) - 1].queueFamilyIndex = i;
-                                        (*dest)[(*queueCreateInfosCount) - 1].queueCount = 1; // queues will always have at least 1
-                                        float* priority = malloc(sizeof(float));
-                                        *priority = 1.0;
-                                        (*dest)[(*queueCreateInfosCount) - 1].pQueuePriorities = priority;
-                                        rtELog_debug_logInfo("Found a unique presentation queue");
-                                }
-                                break;
-                        }
-                }
+                presentationSupported = addPresentationQueueCreateInfoToArray(
+                        dest,
+                        physDevice,
+                        *surface,
+                        numQueueFamilies,
+                        queueCreateInfosCount
+                );
         }
 
         free(queueFamilyProperties);
         // TODO: add logic to free queue create info array
         // (memory leak)
-        return (surface == nullptr) ? requiredQueueTypeFlags == 0 : requiredQueueTypeFlags == 0 && presentationSupported ;
+        return (surface == nullptr) ? foundQueuesWithFlags : foundQueuesWithFlags && presentationSupported ;
 }
 // TODO: Fix memory leak and find a way to specify if there needs to a be a queue that supports presentation
 // OPTIONS: Use an unused bit to signift presentation (no)
