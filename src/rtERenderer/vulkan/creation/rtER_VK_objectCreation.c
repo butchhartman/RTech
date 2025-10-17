@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 #include "rtELog/rtELog.h"
 #include "rtERenderer/vulkan/creation/rtER_VK_infoCreation.h"
 #include "rtERenderer/vulkan/debug/checkValidationLayerSupport.h"
@@ -181,20 +182,71 @@ static bool physicalDeviceSupportsPresentation(
         return false;
 }
 
+// TODO: Break this functionality into its own function 'isSubset' which returns true if parameter A is a subset of parameter B (string arrays) 
+static bool physicalDeviceSupportsExtensions(
+        VkPhysicalDevice physDevice,
+        const char** requiredExtensions,
+        uint32_t requiredExtensionsCount
+        ) {
+        uint32_t supportedExtensionsCount; 
+        vkEnumerateDeviceExtensionProperties(physDevice, nullptr, &supportedExtensionsCount, nullptr); 
+
+        VkExtensionProperties* supportedExtensions = malloc(sizeof(VkExtensionProperties) * supportedExtensionsCount);
+
+        vkEnumerateDeviceExtensionProperties(physDevice, nullptr, &supportedExtensionsCount, supportedExtensions); 
+
+        #ifndef NDEBUG
+        rtELog_debug_logInfo("Required device extensions:");
+        for (size_t i = 0; i < requiredExtensionsCount; i++) {
+                rtELog_debug_logInfo("\t%s", requiredExtensions[i]);
+        }
+
+        rtELog_debug_logInfo("Supported device extensions:");
+        for (size_t i = 0; i < supportedExtensionsCount; i++) {
+                rtELog_debug_logInfo("\t%s", supportedExtensions[i].extensionName);
+        }
+        #endif
+
+        for (size_t i = 0; i < requiredExtensionsCount; i++) {
+                bool requiredExtensionSupported = false;
+                for (size_t j = 0; j < supportedExtensionsCount; j++) {
+                        if (strcmp(requiredExtensions[i], supportedExtensions[j].extensionName) == 0) {
+                                requiredExtensionSupported = true;
+                                break;
+                        }
+                }
+
+                if (!requiredExtensionSupported) {
+                        free(supportedExtensions);
+                        return false;
+                }
+        }
+
+
+        return true;
+}
+
 static bool checkPhysicalDeviceSuitability(
         VkPhysicalDevice physDevice ,
-        VkSurfaceKHR surface
+        VkSurfaceKHR surface,
+        VkQueueFlagBits requiredQueueFlags,
+        const char** requiredExtensions,
+        uint32_t requiredExtensionsCount
         ) {
         
-        VkQueueFlagBits flags = VK_QUEUE_GRAPHICS_BIT;
-
-        return physicalDeviceHasQueueFamilies(physDevice, &flags) && physicalDeviceSupportsPresentation(physDevice, surface);
+        return 
+        physicalDeviceHasQueueFamilies(physDevice, &requiredQueueFlags) && 
+        physicalDeviceSupportsPresentation(physDevice, surface) &&
+        physicalDeviceSupportsExtensions(physDevice, requiredExtensions, requiredExtensionsCount);
 }
 
 enum VkResult rtER_VK_getSuitablePhysicalDevice(
         VkPhysicalDevice* dest,
         VkInstance instance,
-        VkSurfaceKHR surface
+        VkSurfaceKHR surface,
+        VkQueueFlagBits requiredQueueFlags,
+        const char** requiredExtensions,
+        uint32_t requiredExtensionsCount
         ) {
         uint32_t numPhysDevices;
         vkEnumeratePhysicalDevices(instance, &numPhysDevices, nullptr);
@@ -204,7 +256,7 @@ enum VkResult rtER_VK_getSuitablePhysicalDevice(
         vkEnumeratePhysicalDevices(instance, &numPhysDevices, physicalDevices);
 
         for (size_t i = 0; i < numPhysDevices; i++) {
-                if (checkPhysicalDeviceSuitability(physicalDevices[i], surface)) {
+                if (checkPhysicalDeviceSuitability(physicalDevices[i], surface, requiredQueueFlags, requiredExtensions, requiredExtensionsCount)) {
                         *dest = physicalDevices[i];
                         rtELog_debug_logInfo("Found a suitable physical device");
                         return VK_SUCCESS;
@@ -214,3 +266,85 @@ enum VkResult rtER_VK_getSuitablePhysicalDevice(
         rtELog_logError("Failed to find a suitable physical device");
         return VK_ERROR_VALIDATION_FAILED;
 }
+
+static bool getDeviceQueueCreateInfos(
+        VkDeviceQueueCreateInfo** dest,
+        uint32_t* queueCreateInfosCount,
+        VkQueueFlagBits requiredQueueTypeFlags,
+        VkPhysicalDevice physDevice
+        ) {
+        *dest = nullptr;
+        *queueCreateInfosCount = 0;
+
+        uint32_t numQueueFamilies;
+        VkQueueFamilyProperties2* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
+
+        for (size_t i = 0; i < numQueueFamilies; i++) {
+                if (queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags) {
+
+                        (*queueCreateInfosCount)++;
+                        *dest = realloc(*dest, sizeof(VkQueueFamilyProperties2) * (*queueCreateInfosCount));
+
+                        (*dest)[(*queueCreateInfosCount) - 1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                        (*dest)[(*queueCreateInfosCount) - 1].pNext = nullptr;
+                        (*dest)[(*queueCreateInfosCount) - 1].flags = 0;
+                        (*dest)[(*queueCreateInfosCount) - 1].queueFamilyIndex = i;
+                        (*dest)[(*queueCreateInfosCount) - 1].queueCount = 1; // queues must have at least 1
+                        float* priority = malloc(sizeof(float));
+                        *priority = 1.0;
+                        (*dest)[(*queueCreateInfosCount) - 1].pQueuePriorities = priority;
+
+                        requiredQueueTypeFlags = requiredQueueTypeFlags & ~(queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags);
+                        if (requiredQueueTypeFlags == 0) {
+                                free(queueFamilyProperties);
+                                return true;
+                        }
+                }
+        }
+
+        free(queueFamilyProperties);
+        // TODO: add logic to free queue create info array
+        // (memory leak)
+        return false;
+}
+// TODO: Fix memory leak and find a way to specify if there needs to a be a queue that supports presentation
+// OPTIONS: Use an unused bit to signift presentation (no)
+//          Wrap vulkan flags in my own flag enum
+//          Add a bool signifying presentation support check <-- probbaly
+//          Assume presentation support is needed because this is a game engine :)
+enum VkResult rtER_VK_createLogicalDevice(
+        VkDevice* dest,
+        VkPhysicalDevice physDevice,
+        VkQueueFlagBits requiredQueueTypeFlags,
+        const char** requiredExtensions,
+        uint32_t requiredExtensionsCount
+        ) {
+        // instance extension support should already be inferred by finding a suitable physical device
+        // create queue create infos
+        // create device
+        uint32_t queueCreateInfoCount;
+        VkDeviceQueueCreateInfo* queueCreateInfos;
+        if (!getDeviceQueueCreateInfos(&queueCreateInfos, &queueCreateInfoCount, requiredQueueTypeFlags, physDevice)) {
+                rtELog_logError("Required queues not supported");
+                return VK_ERROR_INCOMPATIBLE_DRIVER;
+        }
+
+        VkDeviceCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .queueCreateInfoCount = queueCreateInfoCount,
+                .pQueueCreateInfos = queueCreateInfos,
+                .enabledLayerCount = 0,
+                .ppEnabledLayerNames = nullptr,
+                .enabledExtensionCount = requiredExtensionsCount,
+                .ppEnabledExtensionNames = requiredExtensions,
+                .pEnabledFeatures = nullptr
+        };
+
+        VK_ERROR_LOG_AND_RETURN(vkCreateDevice(physDevice, &createInfo, nullptr, dest), "Failed to create logical device");
+
+        rtELog_debug_logInfo("Successfully created logical device");
+        return VK_SUCCESS;
+}
+

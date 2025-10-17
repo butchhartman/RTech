@@ -2,6 +2,8 @@
 #define RTER_VK_OBJECTCREATION_H_
 #include <vulkan/vulkan.h>
 
+
+
 enum VkResult rtER_VK_createVKInstance(
         VkInstance* dest, 
         uint32_t* apiVersionDest, 
@@ -19,7 +21,19 @@ enum VkResult rtER_VK_createDebugMessenger(
 enum VkResult rtER_VK_getSuitablePhysicalDevice(
         VkPhysicalDevice* dest,
         VkInstance instance,
-        VkSurfaceKHR surface
+        VkSurfaceKHR surface,
+        VkQueueFlagBits requiredQueueFlags,
+        const char** requiredExtensions,
+        uint32_t requiredExtensionsCount
         );
+
+enum VkResult rtER_VK_createLogicalDevice(
+        VkDevice* dest,
+        VkPhysicalDevice physDevice,
+        VkQueueFlagBits requiredQueueTypeFlags,
+        const char** requiredExtensions,
+        uint32_t requiredExtensionsCount
+        );
+
 
 #endif // RTER_VK_OBJECTCREATION_H_

@@ -20,6 +20,7 @@ struct rtER_VulkanImpl {
         VkDebugUtilsMessengerEXT debugMessenger;
         VkSurfaceKHR surface;
         VkPhysicalDevice physDevice;
+        VkDevice logicalDevice;
 };
 
  
@@ -67,8 +68,19 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
         rtER_VK_getSuitablePhysicalDevice(
                 &(*dest)->physDevice,
                 (*dest)->instance,
-                (*dest)->surface
+                (*dest)->surface,
+                VK_QUEUE_GRAPHICS_BIT,
+                rtER_VK_requiredDeviceExtensions,
+                ARRAY_SIZE(rtER_VK_requiredDeviceExtensions)
                 );
+
+        rtER_VK_createLogicalDevice(
+                &(*dest)->logicalDevice,
+                (*dest)->physDevice,
+                VK_QUEUE_GRAPHICS_BIT,
+                rtER_VK_requiredDeviceExtensions,
+                ARRAY_SIZE(rtER_VK_requiredDeviceExtensions)
+        );
 
         return rtEErrorCode_SUCCESS;
 }

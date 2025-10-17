@@ -11,4 +11,8 @@
                 "VK_LAYER_KHRONOS_validation"
         };
 
+        const char* rtER_VK_requiredDeviceExtensions[] = {
+                "VK_KHR_swapchain"
+        };
+
 #endif // RTERENDERER_VK_CONSTANTS_H_
