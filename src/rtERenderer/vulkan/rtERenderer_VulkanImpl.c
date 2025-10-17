@@ -26,7 +26,7 @@ struct rtER_VulkanImpl {
  
 enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, struct rtEngineWindow* window) {
         assert(dest != nullptr);
-        assert(*dest != nullptr);
+//////////////////        assert(*dest != nullptr);
 
         *dest = malloc(sizeof(struct rtER_VulkanImpl));
 

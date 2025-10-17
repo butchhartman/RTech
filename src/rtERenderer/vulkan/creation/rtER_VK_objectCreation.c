@@ -222,7 +222,7 @@ static bool physicalDeviceSupportsExtensions(
                 }
         }
 
-
+        free(supportedExtensions);
         return true;
 }
 
@@ -385,6 +385,8 @@ enum VkResult rtER_VK_createLogicalDevice(
         VK_ERROR_LOG_AND_RETURN(vkCreateDevice(physDevice, &createInfo, nullptr, dest), "Failed to create logical device");
 
         rtELog_debug_logInfo("Successfully created logical device");
+
+        freeDeviceQueueCreateInfos(queueCreateInfos, queueCreateInfoCount); 
         return VK_SUCCESS;
 }
 
