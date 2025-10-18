@@ -269,91 +269,6 @@ enum VkResult rtER_VK_getSuitablePhysicalDevice(
         return VK_ERROR_VALIDATION_FAILED;
 }
 
-static void addDeviceQueueCreateInfoToArray(
-        VkDeviceQueueCreateInfo* dest,
-        uint32_t queueCreateInfosCount,
-        uint32_t queueFamilyIndex
-        ) {
-
-        (dest)[(queueCreateInfosCount) - 1].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        (dest)[(queueCreateInfosCount) - 1].pNext = nullptr;
-        (dest)[(queueCreateInfosCount) - 1].flags = 0;
-        (dest)[(queueCreateInfosCount) - 1].queueFamilyIndex = queueFamilyIndex;
-        (dest)[(queueCreateInfosCount) - 1].queueCount = 1; // queues must have at least 1
-        float* priority = malloc(sizeof(float));
-        *priority = 1.0;
-        (dest)[(queueCreateInfosCount) - 1].pQueuePriorities = priority;
-}
-
-static bool addPresentationQueueCreateInfoToArray(
-        VkDeviceQueueCreateInfo** dest,
-        VkPhysicalDevice physDevice,
-        VkSurfaceKHR surface,
-        uint32_t queueFamilyCount,
-        uint32_t* queueCreateInfosCount
-        ) {
-        
-        VkBool32 presentationSupported = VK_FALSE;
-        for (size_t i = 0; i < queueFamilyCount; i++) {
-                vkGetPhysicalDeviceSurfaceSupportKHR(
-                        physDevice,
-                        i,
-                        surface,
-                        &presentationSupported
-                        );
-
-                if (presentationSupported == VK_TRUE) {
-                        bool indexUsed = false;
-                        for (size_t j = 0; j < *queueCreateInfosCount; j++) {
-                                if ((*dest)[j].queueFamilyIndex == i) {
-                                        rtELog_debug_logInfo("Found a presentation queue, but it does not have a unique index.");
-                                        indexUsed = true;
-                                }
-                        }
-                        if (!indexUsed) {
-                                (*queueCreateInfosCount)++;
-                                *dest = realloc(*dest, sizeof(VkDeviceQueueCreateInfo) * (*queueCreateInfosCount));
-
-                                addDeviceQueueCreateInfoToArray(
-                                       *dest,
-                                       *queueCreateInfosCount,
-                                       i
-                                );
-                                rtELog_debug_logInfo("Found a unique presentation queue");
-                        }
-                        break;
-                }
-        }
-
-        return presentationSupported == VK_TRUE;
-}
-
-static bool addQueuesWithFlagsToArray(
-        VkDeviceQueueCreateInfo** dest,
-        uint32_t* queueCreateInfosCount,
-        VkQueueFlagBits requiredQueueTypeFlags,
-        uint32_t numQueueFamilies,
-        VkQueueFamilyProperties* queueFamilyProperties
-        ) {
-        for (size_t i = 0; i < numQueueFamilies; i++) {
-                if (queueFamilyProperties[i].queueFlags & requiredQueueTypeFlags) {
-
-                        (*queueCreateInfosCount)++;
-                        *dest = realloc(*dest, sizeof(VkDeviceQueueCreateInfo) * (*queueCreateInfosCount));
-
-                        addDeviceQueueCreateInfoToArray(*dest, *queueCreateInfosCount, i);
-
-                        requiredQueueTypeFlags = requiredQueueTypeFlags & ~(queueFamilyProperties[i].queueFlags & requiredQueueTypeFlags);
-                        if (requiredQueueTypeFlags == 0) {
-                                rtELog_debug_logInfo("Found all required queue bits");
-                                break;
-                        }
-                }
-        }
-
-        return requiredQueueTypeFlags == 0;
-}
-
 static void freeDeviceQueueCreateInfos(
         VkDeviceQueueCreateInfo* ptr,
         uint32_t queueCreateInfosCount
@@ -366,40 +281,106 @@ static void freeDeviceQueueCreateInfos(
         free(ptr);
 }
 
-static bool getDeviceQueueCreateInfos(
-        VkDeviceQueueCreateInfo** dest,
-        uint32_t* queueCreateInfosCount,
-        VkQueueFlagBits requiredQueueTypeFlags,
+static bool populatertERQueueInfo(
+        struct rtER_VK_queueInfo* dest,
+        struct rtER_VK_queueCapabilities requiredQueueCapabilities,
         VkPhysicalDevice physDevice,
-        VkSurfaceKHR* surface
-        ) {
-        *dest = nullptr;
-        *queueCreateInfosCount = 0;
+        VkSurfaceKHR surface
+) {
+        rtELog_debug_logInfo("Populating queue info struct");
+        // zero everything so realloc will work correctly
+        dest->queues = nullptr;
+        dest->queueFamilyIndices = nullptr;
+        dest->queueFlags = nullptr;
+        dest->queueCount = 0;
 
-        uint32_t numQueueFamilies;
-        VkQueueFamilyProperties* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
-
-        bool foundQueuesWithFlags = addQueuesWithFlagsToArray(
-                dest,
-                queueCreateInfosCount,
-                requiredQueueTypeFlags,
-                numQueueFamilies,
-                queueFamilyProperties
-        );
-
-        bool presentationSupported = false;
-        if (surface != nullptr) {
-                presentationSupported = addPresentationQueueCreateInfoToArray(
-                        dest,
+        uint32_t queueFamilyCount;
+        VkQueueFamilyProperties* queueFamilyProperties = getQueueFamilyProperties(physDevice, &queueFamilyCount);
+        
+        for (size_t i = 0; i < queueFamilyCount; i++) {
+                VkBool32 queueSupportsPresentation = VK_FALSE;
+                vkGetPhysicalDeviceSurfaceSupportKHR(
                         physDevice,
-                        *surface,
-                        numQueueFamilies,
-                        queueCreateInfosCount
+                        i,
+                        surface,
+                        &queueSupportsPresentation
                 );
+                if (
+                        (queueFamilyProperties[i].queueFlags & requiredQueueCapabilities.queueFlags) || 
+                        (requiredQueueCapabilities.presentationSupport && queueSupportsPresentation)
+
+                        ) {
+                        enum VkQueueFlagBits supportedQueueFlags = queueFamilyProperties[i].queueFlags & requiredQueueCapabilities.queueFlags;
+                        VkBool32 presentationSupport = (requiredQueueCapabilities.presentationSupport && queueSupportsPresentation);
+                        requiredQueueCapabilities.queueFlags &= ~(queueFamilyProperties[i].queueFlags & requiredQueueCapabilities.queueFlags);
+                        requiredQueueCapabilities.presentationSupport = (presentationSupport) ? false : requiredQueueCapabilities.presentationSupport;
+
+                        struct rtER_VK_queueCapabilities queueCapabilities = {
+                                .queueFlags = supportedQueueFlags,
+                                .presentationSupport = presentationSupport
+                        };
+
+                        dest->queueCount++;
+
+                        dest->queues = realloc(dest->queues, sizeof(VkQueue) * dest->queueCount);
+                        dest->queueFamilyIndices = realloc(dest->queueFamilyIndices, sizeof(uint32_t) * dest->queueCount);
+                        dest->queueFlags= realloc(dest->queueFlags, sizeof(struct rtER_VK_queueCapabilities) * dest->queueCount);
+
+                        dest->queues[dest->queueCount-1] = nullptr;
+                        dest->queueFamilyIndices[dest->queueCount-1] = i;
+                        dest->queueFlags[dest->queueCount-1] = queueCapabilities;
+
+                        if (requiredQueueCapabilities.queueFlags == 0 && requiredQueueCapabilities.presentationSupport == false) {
+                                rtELog_debug_logInfo("Found all required queues");
+                                free(queueFamilyProperties);
+                                return true;
+                        }
+                }
         }
 
         free(queueFamilyProperties);
-        return (surface == nullptr) ? foundQueuesWithFlags : foundQueuesWithFlags && presentationSupported ;
+        return false;
+}
+
+static bool getDeviceQueueCreateInfosFromrtERQueueInfo(
+        VkDeviceQueueCreateInfo** dest,
+        uint32_t* queueCreateInfoCount,
+        struct rtER_VK_queueInfo queueInfo
+) {
+        *queueCreateInfoCount = queueInfo.queueCount;
+        rtELog_debug_logInfo("Queue count: %lu", queueInfo.queueCount);
+        *dest = malloc(sizeof(VkDeviceQueueCreateInfo) * queueInfo.queueCount);
+
+        for (size_t i = 0; i < queueInfo.queueCount; i++) {
+                (*dest)[i].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+                (*dest)[i].pNext = nullptr;
+                (*dest)[i].flags = 0;
+                (*dest)[i].queueFamilyIndex = queueInfo.queueFamilyIndices[i];
+                (*dest)[i].queueCount = 1; // queues must have at least 1
+                float* priority = malloc(sizeof(float));
+                *priority = 1.0;
+                (*dest)[i].pQueuePriorities = priority;
+                rtELog_debug_logInfo("Added device queue index: %lu to the device queue create info array", queueInfo.queueFamilyIndices[i]);
+        }
+
+        return true;
+}
+
+static bool populationrtERQueueInfoQueueHandles(
+        struct rtER_VK_queueInfo queueInfo,
+        VkDevice device
+) {
+        for (size_t i = 0; i < queueInfo.queueCount; i++) {
+                vkGetDeviceQueue(
+                        device,
+                       queueInfo.queueFamilyIndices[i],
+                       0, // this is the index of the queue within the queue family. I only request 1 queue so this is always 0
+                       &queueInfo.queues[i]
+                );
+                rtELog_debug_logInfo("Created queue handle for queue index %lu", queueInfo.queueFamilyIndices[i]);
+        }
+
+        return true;
 }
 
 // SOLUTION: If the surface pointer is nullptr, then it is implied presentation is not wanted. if it is a valid pointer, then it is implied surface support is wanted
@@ -409,17 +390,30 @@ enum VkResult rtER_VK_createLogicalDevice(
         VkSurfaceKHR* surface,
         VkQueueFlagBits requiredQueueTypeFlags,
         const char** requiredExtensions,
-        uint32_t requiredExtensionsCount
+        uint32_t requiredExtensionsCount,
+        struct rtER_VK_queueInfo* queueInfo
         ) {
-        // instance extension support should already be inferred by finding a suitable physical device
-        // create queue create infos
-        // create device
-        uint32_t queueCreateInfoCount;
-        VkDeviceQueueCreateInfo* queueCreateInfos;
-        if (!getDeviceQueueCreateInfos(&queueCreateInfos, &queueCreateInfoCount, requiredQueueTypeFlags, physDevice, surface)) {
+        struct rtER_VK_queueCapabilities requiredQueueCapabilities = {
+                .queueFlags = requiredQueueTypeFlags,
+                .presentationSupport = !(surface == nullptr)
+        };
+        if (!populatertERQueueInfo(
+                queueInfo,
+                requiredQueueCapabilities,
+                physDevice,
+                *surface
+                )) {
                 rtELog_logError("Required queues not supported");
                 return VK_ERROR_INCOMPATIBLE_DRIVER;
         }
+
+        uint32_t queueCreateInfoCount;
+        VkDeviceQueueCreateInfo* queueCreateInfos;
+        getDeviceQueueCreateInfosFromrtERQueueInfo(
+                &queueCreateInfos,
+                &queueCreateInfoCount,
+                *queueInfo
+        );
 
         VkDeviceCreateInfo createInfo = {
                 .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -437,6 +431,10 @@ enum VkResult rtER_VK_createLogicalDevice(
         VK_ERROR_LOG_AND_RETURN(vkCreateDevice(physDevice, &createInfo, nullptr, dest), "Failed to create logical device");
 
         rtELog_debug_logInfo("Successfully created logical device");
+
+        populationrtERQueueInfoQueueHandles(*queueInfo, *dest);
+
+        rtELog_debug_logInfo("Successfully retrieved all queue handles");
 
         freeDeviceQueueCreateInfos(queueCreateInfos, queueCreateInfoCount); 
         return VK_SUCCESS;

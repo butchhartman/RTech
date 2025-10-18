@@ -2,7 +2,17 @@
 #define RTER_VK_OBJECTCREATION_H_
 #include <vulkan/vulkan.h>
 
+struct rtER_VK_queueCapabilities {
+        enum VkQueueFlagBits queueFlags;
+        VkBool32 presentationSupport;
+};
 
+struct rtER_VK_queueInfo {
+        VkQueue* queues;
+        uint32_t* queueFamilyIndices;
+        struct rtER_VK_queueCapabilities* queueFlags;
+        uint32_t queueCount;
+};
 
 enum VkResult rtER_VK_createVKInstance(
         VkInstance* dest, 
@@ -33,7 +43,8 @@ enum VkResult rtER_VK_createLogicalDevice(
         VkSurfaceKHR* surface,
         VkQueueFlagBits requiredQueueTypeFlags,
         const char** requiredExtensions,
-        uint32_t requiredExtensionsCount
+        uint32_t requiredExtensionsCount,
+        struct rtER_VK_queueInfo* queueInfo
         );
 
 

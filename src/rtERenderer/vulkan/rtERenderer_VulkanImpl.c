@@ -21,6 +21,8 @@ struct rtER_VulkanImpl {
         VkSurfaceKHR surface;
         VkPhysicalDevice physDevice;
         VkDevice logicalDevice;
+        struct rtER_VK_queueInfo queueInfo;
+        VkSwapchainKHR swapchain;
 };
 
  
@@ -79,7 +81,8 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 &(*dest)->surface,
                 VK_QUEUE_GRAPHICS_BIT,
                 rtER_VK_requiredDeviceExtensions,
-                ARRAY_SIZE(rtER_VK_requiredDeviceExtensions)
+                ARRAY_SIZE(rtER_VK_requiredDeviceExtensions),
+                &(*dest)->queueInfo
         );
 
         return rtEErrorCode_SUCCESS;
