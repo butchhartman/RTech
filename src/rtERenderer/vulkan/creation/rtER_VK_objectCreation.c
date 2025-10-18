@@ -10,6 +10,8 @@
 #include "rtERenderer/vulkan/creation/rtER_VK_objectCreation.h"
 #include "rtERenderer/vulkan/macros/rtERendererVKMacros.h"
 
+// I'm going to use the 1.0 version of Vulkan here so I can understand how everything fits together (also bonues compatibility but i dont think that is really a concern). Once that is done, I will upgrade to future versions as I see fit.
+
 
 enum VkResult rtER_VK_createVKInstance(
         VkInstance* dest, 
@@ -50,7 +52,7 @@ enum VkResult rtER_VK_createVKInstance(
                 .applicationVersion = VK_MAKE_API_VERSION(0, RTECH_VERSION_MAJOR, RTECH_VERSION_MINOR, RTECH_VERSION_PATCH),
                 .pEngineName = nullptr,
                 .engineVersion = 0,
-                .apiVersion = VK_API_VERSION_1_4
+                .apiVersion = VK_API_VERSION_1_0//VK_API_VERSION_1_4
         };
 
         struct VkDebugUtilsMessengerCreateInfoEXT dbmsgCreateInfo = 
@@ -110,16 +112,17 @@ enum VkResult rtER_VK_createDebugMessenger(
 }
 
 // returns allocated memory that the caller is responsible for freeing. sets count to array size
-static VkQueueFamilyProperties2* getQueueFamilyProperties(VkPhysicalDevice physDevice, uint32_t* count) {
-        vkGetPhysicalDeviceQueueFamilyProperties2(physDevice, count, nullptr);
+// TODO: Change this to use the 1.0 version of vkqueuefamilyproperties
+static VkQueueFamilyProperties* getQueueFamilyProperties(VkPhysicalDevice physDevice, uint32_t* count) {
+        vkGetPhysicalDeviceQueueFamilyProperties(physDevice, count, nullptr);
 
-        VkQueueFamilyProperties2* queueFamilyProperties = malloc(sizeof(VkQueueFamilyProperties2) * *count);
-        for (size_t i = 0; i < *count; i++) {
-                queueFamilyProperties[i].sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
-                queueFamilyProperties[i].pNext = nullptr;
-        }
+        VkQueueFamilyProperties* queueFamilyProperties = malloc(sizeof(VkQueueFamilyProperties) * *count);
+//        for (size_t i = 0; i < *count; i++) {
+ //               queueFamilyProperties[i]. = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
+   //             queueFamilyProperties[i].pNext = nullptr;
+  //      }
 
-        vkGetPhysicalDeviceQueueFamilyProperties2(physDevice, count, queueFamilyProperties);
+        vkGetPhysicalDeviceQueueFamilyProperties(physDevice, count, queueFamilyProperties);
 
         return queueFamilyProperties;
 }
@@ -134,15 +137,14 @@ static bool physicalDeviceHasQueueFamilies(
                 return true;
         }
         uint32_t numQueueFamilies;
-        VkQueueFamilyProperties2* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
+        VkQueueFamilyProperties* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
         // TODO: add more selection criteria parameters if I ever care about that sort of thing
 
-        vkGetPhysicalDeviceQueueFamilyProperties2(physDevice, &numQueueFamilies, queueFamilyProperties);
         rtELog_debug_logInfo("Need %d flags", (*neededQueueFlags));
 
         for (size_t i = 0; i < numQueueFamilies; i++) {
-                if (queueFamilyProperties[i].queueFamilyProperties.queueFlags & *neededQueueFlags) {
-                        (*neededQueueFlags) = (*neededQueueFlags) & ~(queueFamilyProperties[i].queueFamilyProperties.queueFlags & *neededQueueFlags);
+                if (queueFamilyProperties[i].queueFlags & *neededQueueFlags) {
+                        (*neededQueueFlags) = (*neededQueueFlags) & ~(queueFamilyProperties[i].queueFlags & *neededQueueFlags);
                         free(queueFamilyProperties);
                         rtELog_debug_logInfo("Found queue family, iterating %d", (*neededQueueFlags));
                         return physicalDeviceHasQueueFamilies(physDevice, neededQueueFlags);
@@ -159,9 +161,9 @@ static bool physicalDeviceSupportsPresentation(
         VkPhysicalDevice physDevice,
         VkSurfaceKHR surface
         ) {
-        // TODO: add more selection criteria parameters if I ever care about that sort of thing
         uint32_t numQueueFamilies;
-        VkQueueFamilyProperties2* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
+        VkQueueFamilyProperties* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
+        free(queueFamilyProperties);
 
         for (size_t i = 0; i < numQueueFamilies; i++) {
                 VkBool32 supported = VK_FALSE;
@@ -172,12 +174,10 @@ static bool physicalDeviceSupportsPresentation(
                         &supported
                         );
                 if (supported == VK_TRUE) {
-                        free(queueFamilyProperties);
                         return true;
                 }
         }
 
-        free(queueFamilyProperties);
 
         return false;
 }
@@ -333,17 +333,17 @@ static bool addQueuesWithFlagsToArray(
         uint32_t* queueCreateInfosCount,
         VkQueueFlagBits requiredQueueTypeFlags,
         uint32_t numQueueFamilies,
-        VkQueueFamilyProperties2* queueFamilyProperties
+        VkQueueFamilyProperties* queueFamilyProperties
         ) {
         for (size_t i = 0; i < numQueueFamilies; i++) {
-                if (queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags) {
+                if (queueFamilyProperties[i].queueFlags & requiredQueueTypeFlags) {
 
                         (*queueCreateInfosCount)++;
                         *dest = realloc(*dest, sizeof(VkDeviceQueueCreateInfo) * (*queueCreateInfosCount));
 
                         addDeviceQueueCreateInfoToArray(*dest, *queueCreateInfosCount, i);
 
-                        requiredQueueTypeFlags = requiredQueueTypeFlags & ~(queueFamilyProperties[i].queueFamilyProperties.queueFlags & requiredQueueTypeFlags);
+                        requiredQueueTypeFlags = requiredQueueTypeFlags & ~(queueFamilyProperties[i].queueFlags & requiredQueueTypeFlags);
                         if (requiredQueueTypeFlags == 0) {
                                 rtELog_debug_logInfo("Found all required queue bits");
                                 break;
@@ -377,7 +377,7 @@ static bool getDeviceQueueCreateInfos(
         *queueCreateInfosCount = 0;
 
         uint32_t numQueueFamilies;
-        VkQueueFamilyProperties2* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
+        VkQueueFamilyProperties* queueFamilyProperties = getQueueFamilyProperties(physDevice, &numQueueFamilies);
 
         bool foundQueuesWithFlags = addQueuesWithFlagsToArray(
                 dest,
@@ -399,15 +399,9 @@ static bool getDeviceQueueCreateInfos(
         }
 
         free(queueFamilyProperties);
-        // TODO: add logic to free queue create info array
-        // (memory leak)
         return (surface == nullptr) ? foundQueuesWithFlags : foundQueuesWithFlags && presentationSupported ;
 }
-// TODO: Fix memory leak and find a way to specify if there needs to a be a queue that supports presentation
-// OPTIONS: Use an unused bit to signift presentation (no)
-//          Wrap vulkan flags in my own flag enum
-//          Add a bool signifying presentation support check <-- probbaly
-//          Assume presentation support is needed because this is a game engine :)
+
 // SOLUTION: If the surface pointer is nullptr, then it is implied presentation is not wanted. if it is a valid pointer, then it is implied surface support is wanted
 enum VkResult rtER_VK_createLogicalDevice(
         VkDevice* dest,

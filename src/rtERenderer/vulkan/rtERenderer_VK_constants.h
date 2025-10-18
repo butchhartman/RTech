@@ -8,7 +8,8 @@
         }; 
 
         const char* rtER_VK_requiredValidationLayers[] = {
-                "VK_LAYER_KHRONOS_validation"
+                "VK_LAYER_KHRONOS_validation",
+                "VK_LAYER_KHRONOS_profiles"
         };
 
         const char* rtER_VK_requiredDeviceExtensions[] = {
