@@ -12,6 +12,25 @@
 
 // I'm going to use the 1.0 version of Vulkan here so I can understand how everything fits together (also bonues compatibility but i dont think that is really a concern). Once that is done, I will upgrade to future versions as I see fit.
 
+VkQueue* rtER_VK_getQueueWithCapabilities(
+        struct rtER_VK_queueInfo queueInfo, 
+        struct rtER_VK_queueCapabilities requiredCapabilities, 
+        uint32_t* queueFamilyIndex) {
+        for (size_t i = 0; i < queueInfo.queueCount; i++) {
+                if (
+                        queueInfo.queueFlags[i].queueFlags == requiredCapabilities.queueFlags &&
+                        queueInfo.queueFlags[i].presentationSupport == requiredCapabilities.presentationSupport
+                   ) {
+                        if (queueFamilyIndex != nullptr) {
+                                *queueFamilyIndex = queueInfo.queueFamilyIndices[i];
+                        }
+                        return &queueInfo.queues[i];
+                }
+
+        }
+
+        return nullptr;
+}
 
 enum VkResult rtER_VK_createVKInstance(
         VkInstance* dest, 

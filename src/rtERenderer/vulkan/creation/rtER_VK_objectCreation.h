@@ -14,6 +14,12 @@ struct rtER_VK_queueInfo {
         uint32_t queueCount;
 };
 
+VkQueue* rtER_VK_getQueueWithCapabilities(
+        struct rtER_VK_queueInfo queueInfo, 
+        struct rtER_VK_queueCapabilities requiredCapabilities, 
+        uint32_t* queueFamilyIndex
+        );
+
 enum VkResult rtER_VK_createVKInstance(
         VkInstance* dest, 
         uint32_t* apiVersionDest, 
