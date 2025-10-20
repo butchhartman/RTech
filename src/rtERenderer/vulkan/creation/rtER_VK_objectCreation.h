@@ -74,4 +74,10 @@ enum VkResult rtER_VK_createImageViews(
         uint32_t imageCount,
         VkDevice logicalDevice
         );
+
+enum VkResult rtER_VK_createRenderpass(
+        VkRenderPass* dest,
+        VkDevice logicalDevice,
+        struct rtER_VK_swapchainInfo swapchainInfo
+        );
 #endif // RTER_VK_OBJECTCREATION_H_

@@ -604,16 +604,54 @@ enum VkResult rtER_VK_createImageViews(
 
         return VK_SUCCESS;
 }
-/*
+
 enum VkResult rtER_VK_createRenderpass(
         VkRenderPass* dest,
-        VkDevice logicalDevice
+        VkDevice logicalDevice,
+        struct rtER_VK_swapchainInfo swapchainInfo
         ) {
 
         VkAttachmentDescription imageAttachmentDesc = {
                 .flags = 0,
-                .format =
-        }
+                .format = swapchainInfo.imageFormat,
+                .samples = VK_SAMPLE_COUNT_1_BIT, // No MSAA
+                .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+                .storeOp = VK_ATTACHMENT_STORE_OP_STORE, // Keeps what we draw
+                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, // no stencil buffer, so dont care
+                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+                .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR // The layout becomes ready for presentation when the renderpass ends
+        };
+
+        VkAttachmentReference colorAttach = {
+                .attachment = 0, // index of attachment in  renderpass create info pattachments
+                .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        };
+
+        VkSubpassDescription subpassDesc = {
+                .flags = 0,
+                .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                .inputAttachmentCount = 0,
+                .pInputAttachments = nullptr,
+                .colorAttachmentCount = 1,
+                .pColorAttachments = &colorAttach,
+                .pResolveAttachments = nullptr,
+                .pDepthStencilAttachment = nullptr,
+                .preserveAttachmentCount = 0,
+                .pPreserveAttachments = nullptr
+        };
+
+        // TODO: Figure out how this thing works as a synchronizer
+        // This makes the subpass wait for the VK_PIPELINAE_STAGE_COLOR_ATTACHMENT_OUPUT stage, which is the stage which waits for the WSI semaphore according to the vulkan sample. (I assume that this means the subpass waits until the color attachment output stage to do anything, otherwise it may not have access to an image)
+        VkSubpassDependency subpassDependancy = {
+                .srcSubpass = VK_SUBPASS_EXTERNAL,
+                .dstSubpass = 0,
+                .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                .srcAccessMask = 0,
+                .dstAccessMask = 0,
+                .dependencyFlags = 0
+        };
 
 
         VkRenderPassCreateInfo createInfo = {
@@ -621,12 +659,20 @@ enum VkResult rtER_VK_createRenderpass(
                 .pNext = nullptr,
                 .flags = 0,
                 .attachmentCount = 1, // color attachment
+                .pAttachments = &imageAttachmentDesc,
                 .subpassCount = 1, // draw to image subpass
-                .dependencyCount = 0,
-                .pDependencies = nullptr
+                .pSubpasses = &subpassDesc,
+                .dependencyCount = 1,
+                .pDependencies = &subpassDependancy
         };
         
+        VK_ERROR_LOG_AND_RETURN(
+                vkCreateRenderPass(
+                        logicalDevice,
+                        &createInfo,
+                        nullptr,
+                        dest),
+                "Failed to create render pass");
 
         return VK_SUCCESS;
 }
-*/
