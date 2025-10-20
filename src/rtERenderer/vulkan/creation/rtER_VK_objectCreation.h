@@ -53,5 +53,11 @@ enum VkResult rtER_VK_createLogicalDevice(
         struct rtER_VK_queueInfo* queueInfo
         );
 
+enum VkResult rtER_VK_createSwapchain(
+        VkSwapchainKHR* dest,
+        VkSurfaceKHR surface,
+        VkPhysicalDevice physDevice,
+        VkDevice logicalDevice
+        );
 
 #endif // RTER_VK_OBJECTCREATION_H_

@@ -85,6 +85,13 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 &(*dest)->queueInfo
         );
 
+        rtER_VK_createSwapchain(
+        &(*dest)->swapchain,
+        (*dest)->surface,
+        (*dest)->physDevice,
+        (*dest)->logicalDevice
+        );
+
         return rtEErrorCode_SUCCESS;
 }
 

@@ -459,3 +459,75 @@ enum VkResult rtER_VK_createLogicalDevice(
         return VK_SUCCESS;
 }
 
+// TODO: dynamically adjust sharing modes to account for graphics and present queues not being the same
+
+enum VkResult rtER_VK_createSwapchain(
+        VkSwapchainKHR* dest,
+        VkSurfaceKHR surface,
+        VkPhysicalDevice physDevice,
+        VkDevice logicalDevice
+        ) {
+        
+        VkSurfaceCapabilitiesKHR surfaceCapabilities;
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+                physDevice,
+                surface,
+                &surfaceCapabilities
+                );
+
+        uint32_t numSurfaceFormats;
+        vkGetPhysicalDeviceSurfaceFormatsKHR(
+                physDevice,
+                surface,
+                &numSurfaceFormats,
+                nullptr
+                );
+        VkSurfaceFormatKHR* surfaceFormats = malloc(sizeof(VkSurfaceFormatKHR) * numSurfaceFormats);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(
+                physDevice,
+                surface,
+                &numSurfaceFormats,
+                surfaceFormats
+                );
+
+       VkSurfaceFormatKHR selectedSurfaceFormat = {};
+
+        for (size_t i = 0; i < numSurfaceFormats; i++) {
+                if (surfaceFormats[i].format == VK_FORMAT_R8G8B8A8_SRGB &&
+                    surfaceFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                        selectedSurfaceFormat = surfaceFormats[i];
+                        break;
+                }
+                selectedSurfaceFormat = surfaceFormats[0];
+        }
+
+        VkSwapchainCreateInfoKHR swapchainCreateInfo = {
+                .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+                .pNext = nullptr,
+                .flags = 0,
+                .surface = surface,
+                .minImageCount = surfaceCapabilities.minImageCount,
+                .imageFormat = selectedSurfaceFormat.format,
+                .imageColorSpace = selectedSurfaceFormat.colorSpace,
+                .imageExtent = surfaceCapabilities.currentExtent,
+                .imageArrayLayers = 1,
+                .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                .queueFamilyIndexCount = 0,// only used when concurrent 
+                .pQueueFamilyIndices = nullptr, // only used when concurrent
+                .preTransform = surfaceCapabilities.currentTransform,
+                .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, // TODO: should check for support on this
+                .presentMode = VK_PRESENT_MODE_FIFO_KHR, // fifo always supported
+                .clipped = VK_TRUE,
+                .oldSwapchain = nullptr
+        };
+
+        VK_ERROR_LOG_AND_RETURN(vkCreateSwapchainKHR(
+               logicalDevice,
+               &swapchainCreateInfo,
+               nullptr,
+               dest
+        ), "Failed to create swapchain");
+
+        return VK_SUCCESS;
+}
