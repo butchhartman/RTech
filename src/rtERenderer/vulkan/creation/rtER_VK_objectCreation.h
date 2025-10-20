@@ -2,6 +2,10 @@
 #define RTER_VK_OBJECTCREATION_H_
 #include <vulkan/vulkan.h>
 
+struct rtER_VK_swapchainInfo {
+        VkFormat imageFormat;
+};
+
 struct rtER_VK_queueCapabilities {
         enum VkQueueFlagBits queueFlags;
         VkBool32 presentationSupport;
@@ -55,6 +59,7 @@ enum VkResult rtER_VK_createLogicalDevice(
 
 enum VkResult rtER_VK_createSwapchain(
         VkSwapchainKHR* dest,
+        struct rtER_VK_swapchainInfo* infoDest,
         VkSurfaceKHR surface,
         VkPhysicalDevice physDevice,
         VkDevice logicalDevice,
@@ -62,4 +67,11 @@ enum VkResult rtER_VK_createSwapchain(
         uint32_t* swapchainImageCount
         );
 
+enum VkResult rtER_VK_createImageViews(
+        VkImageView** dest,
+        struct rtER_VK_swapchainInfo swapchainInfo,
+        VkImage* images,
+        uint32_t imageCount,
+        VkDevice logicalDevice
+        );
 #endif // RTER_VK_OBJECTCREATION_H_

@@ -23,8 +23,10 @@ struct rtER_VulkanImpl {
         VkDevice logicalDevice;
         struct rtER_VK_queueInfo queueInfo;
         VkSwapchainKHR swapchain;
+        struct rtER_VK_swapchainInfo swapchainInfo;
         VkImage* swapchainImages;
         uint32_t swapchainImageCount;
+        VkImageView* swapchainImageViews;
 };
 
  
@@ -89,11 +91,20 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
 
         rtER_VK_createSwapchain(
         &(*dest)->swapchain,
+        &(*dest)->swapchainInfo,
         (*dest)->surface,
         (*dest)->physDevice,
         (*dest)->logicalDevice,
         &(*dest)->swapchainImages,
         &(*dest)->swapchainImageCount
+        );
+
+        rtER_VK_createImageViews(
+        &(*dest)->swapchainImageViews,
+        (*dest)->swapchainInfo,
+        (*dest)->swapchainImages,
+        (*dest)->swapchainImageCount,
+        (*dest)->logicalDevice
         );
 
         return rtEErrorCode_SUCCESS;

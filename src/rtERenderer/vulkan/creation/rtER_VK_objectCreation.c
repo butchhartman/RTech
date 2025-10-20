@@ -461,8 +461,11 @@ enum VkResult rtER_VK_createLogicalDevice(
 
 // TODO: dynamically adjust sharing modes to account for graphics and present queues not being the same
 
+//TODO: create render pass objects
+
 enum VkResult rtER_VK_createSwapchain(
         VkSwapchainKHR* dest,
+        struct rtER_VK_swapchainInfo* infoDest,
         VkSurfaceKHR surface,
         VkPhysicalDevice physDevice,
         VkDevice logicalDevice,
@@ -497,11 +500,14 @@ enum VkResult rtER_VK_createSwapchain(
         for (size_t i = 0; i < numSurfaceFormats; i++) {
                 if (surfaceFormats[i].format == VK_FORMAT_R8G8B8A8_SRGB &&
                     surfaceFormats[i].colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+                        rtELog_debug_logInfo("Found preferred image format");
                         selectedSurfaceFormat = surfaceFormats[i];
                         break;
                 }
                 selectedSurfaceFormat = surfaceFormats[0];
         }
+
+        infoDest->imageFormat = selectedSurfaceFormat.format;
 
         VkSwapchainCreateInfoKHR swapchainCreateInfo = {
                 .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -514,7 +520,7 @@ enum VkResult rtER_VK_createSwapchain(
                 .imageExtent = surfaceCapabilities.currentExtent,
                 .imageArrayLayers = 1,
                 .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+                .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE, // will cause errors if present and graphics queue are not equal
                 .queueFamilyIndexCount = 0,// only used when concurrent 
                 .pQueueFamilyIndices = nullptr, // only used when concurrent
                 .preTransform = surfaceCapabilities.currentTransform,
@@ -549,3 +555,78 @@ enum VkResult rtER_VK_createSwapchain(
 
         return VK_SUCCESS;
 }
+
+enum VkResult rtER_VK_createImageViews(
+        VkImageView** dest,
+        struct rtER_VK_swapchainInfo swapchainInfo,
+        VkImage* images,
+        uint32_t imageCount,
+        VkDevice logicalDevice
+        ) {
+        *dest = malloc(sizeof(VkImageView) * imageCount);
+        for (size_t i = 0; i < imageCount; i++) {
+                VkImageViewCreateInfo createInfo = {
+                        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                        .pNext = nullptr,
+                        .flags = 0,
+                        .image = images[i],
+                        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+                        .format = swapchainInfo.imageFormat,
+                        .components = {
+                                .r = VK_COMPONENT_SWIZZLE_R,
+                                .g = VK_COMPONENT_SWIZZLE_G,
+                                .b = VK_COMPONENT_SWIZZLE_B,
+                                .a = VK_COMPONENT_SWIZZLE_A,
+
+                        },
+
+                        .subresourceRange = {
+                                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                .baseMipLevel = 0,
+                                .levelCount = 1,
+                                .baseArrayLayer = 0,
+                                .layerCount = 1
+                        }
+                };
+
+                VK_ERROR_LOG_AND_RETURN(
+                        vkCreateImageView(
+                                logicalDevice,
+                                &createInfo,
+                                nullptr,
+                                &(*dest)[i]
+                        ),
+
+                        "Failed to create image view"
+                ); 
+
+        }
+
+        return VK_SUCCESS;
+}
+/*
+enum VkResult rtER_VK_createRenderpass(
+        VkRenderPass* dest,
+        VkDevice logicalDevice
+        ) {
+
+        VkAttachmentDescription imageAttachmentDesc = {
+                .flags = 0,
+                .format =
+        }
+
+
+        VkRenderPassCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .attachmentCount = 1, // color attachment
+                .subpassCount = 1, // draw to image subpass
+                .dependencyCount = 0,
+                .pDependencies = nullptr
+        };
+        
+
+        return VK_SUCCESS;
+}
+*/
