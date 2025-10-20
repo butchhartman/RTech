@@ -57,7 +57,9 @@ enum VkResult rtER_VK_createSwapchain(
         VkSwapchainKHR* dest,
         VkSurfaceKHR surface,
         VkPhysicalDevice physDevice,
-        VkDevice logicalDevice
+        VkDevice logicalDevice,
+        VkImage** swapchainImages,
+        uint32_t* swapchainImageCount
         );
 
 #endif // RTER_VK_OBJECTCREATION_H_

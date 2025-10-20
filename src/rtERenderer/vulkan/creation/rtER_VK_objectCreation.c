@@ -465,7 +465,9 @@ enum VkResult rtER_VK_createSwapchain(
         VkSwapchainKHR* dest,
         VkSurfaceKHR surface,
         VkPhysicalDevice physDevice,
-        VkDevice logicalDevice
+        VkDevice logicalDevice,
+        VkImage** swapchainImages,
+        uint32_t* swapchainImageCount
         ) {
         
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
@@ -528,6 +530,22 @@ enum VkResult rtER_VK_createSwapchain(
                nullptr,
                dest
         ), "Failed to create swapchain");
+
+        VK_ERROR_LOG_AND_RETURN(vkGetSwapchainImagesKHR(
+                logicalDevice,
+                *dest,
+                swapchainImageCount,
+                nullptr
+        ), "Failed to retrieve swapchain image count");
+
+        (*swapchainImages) = malloc(sizeof(VkImage) * *swapchainImageCount);
+        VK_ERROR_LOG_AND_RETURN(vkGetSwapchainImagesKHR(
+                logicalDevice,
+                *dest,
+                swapchainImageCount,
+                *swapchainImages
+        ), "Failed to retrieve swapchain images");
+
 
         return VK_SUCCESS;
 }
