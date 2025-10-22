@@ -4,6 +4,7 @@
 
 struct rtER_VK_swapchainInfo {
         VkFormat imageFormat;
+        VkExtent2D swapchianExtent;
 };
 
 struct rtER_VK_queueCapabilities {
@@ -78,6 +79,15 @@ enum VkResult rtER_VK_createImageViews(
 enum VkResult rtER_VK_createRenderpass(
         VkRenderPass* dest,
         VkDevice logicalDevice,
+        struct rtER_VK_swapchainInfo swapchainInfo
+        );
+
+enum VkResult rtER_VK_createFramebuffers(
+        VkFramebuffer** dest,
+        VkDevice logicalDevice,
+        VkRenderPass renderPass,
+        VkImageView* imageViews,
+        uint32_t numImageViews,
         struct rtER_VK_swapchainInfo swapchainInfo
         );
 #endif // RTER_VK_OBJECTCREATION_H_

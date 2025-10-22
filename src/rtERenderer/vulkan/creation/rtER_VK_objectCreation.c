@@ -507,7 +507,6 @@ enum VkResult rtER_VK_createSwapchain(
                 selectedSurfaceFormat = surfaceFormats[0];
         }
 
-        infoDest->imageFormat = selectedSurfaceFormat.format;
 
         VkSwapchainCreateInfoKHR swapchainCreateInfo = {
                 .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -529,6 +528,9 @@ enum VkResult rtER_VK_createSwapchain(
                 .clipped = VK_TRUE,
                 .oldSwapchain = nullptr
         };
+
+        infoDest->imageFormat = selectedSurfaceFormat.format;
+        infoDest->swapchianExtent = swapchainCreateInfo.imageExtent;
 
         VK_ERROR_LOG_AND_RETURN(vkCreateSwapchainKHR(
                logicalDevice,
@@ -676,3 +678,46 @@ enum VkResult rtER_VK_createRenderpass(
 
         return VK_SUCCESS;
 }
+
+enum VkResult rtER_VK_createFramebuffers(
+        VkFramebuffer** dest,
+        VkDevice logicalDevice,
+        VkRenderPass renderPass,
+        VkImageView* imageViews,
+        uint32_t numImageViews,
+        struct rtER_VK_swapchainInfo swapchainInfo
+        ) {
+
+        (*dest) = malloc(sizeof(VkFramebuffer) * numImageViews);
+
+        for (size_t i = 0; i < numImageViews; i++) {
+                VkFramebufferCreateInfo createInfo = {
+                        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                        .pNext = nullptr,
+                        .flags = 0,
+                        .renderPass = renderPass,
+                        .attachmentCount = 1,
+                        .pAttachments = &(imageViews[i]),
+                        .width = swapchainInfo.swapchianExtent.width,
+                        .height = swapchainInfo.swapchianExtent.height,
+                        .layers = 1 // ?
+                };
+
+                VK_ERROR_LOG_AND_RETURN(
+                        vkCreateFramebuffer(
+                                logicalDevice,
+                                &createInfo,
+                                nullptr,
+                                &(*dest)[i]
+                        ),
+                        "Failed to create framebuffer"
+                );
+        }
+
+        return VK_SUCCESS;
+}
+
+// TODO: Framebuffers are what renderpasses render to. I need to create one for each swapchain image.
+// TODO: Create shader modules
+// TODO: Then, I need to create a graphics pipeline
+// TODO: Create semaphores and fences

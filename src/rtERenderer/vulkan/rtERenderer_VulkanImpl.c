@@ -28,6 +28,7 @@ struct rtER_VulkanImpl {
         uint32_t swapchainImageCount;
         VkImageView* swapchainImageViews;
         VkRenderPass renderPass;
+        VkFramebuffer* framebuffers; // same length as image views, which is the same as swapchainimagecount
 };
 
  
@@ -113,6 +114,16 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
         (*dest)->logicalDevice,
         (*dest)->swapchainInfo
         );
+
+        rtER_VK_createFramebuffers(
+                &(*dest)->framebuffers,
+                (*dest)->logicalDevice,
+                (*dest)->renderPass,
+                (*dest)->swapchainImageViews,
+                (*dest)->swapchainImageCount,
+                (*dest)->swapchainInfo
+        );
+
 
         return rtEErrorCode_SUCCESS;
 }
