@@ -4,6 +4,7 @@
 #include <string.h>
 #include "rtELog/rtELog.h"
 #include "rtERenderer/vulkan/creation/rtER_VK_infoCreation.h"
+#include "rtERenderer/vulkan/creation/rtER_VK_readShaderSource.h"
 #include "rtERenderer/vulkan/debug/checkValidationLayerSupport.h"
 #include "rtERenderer/vulkan/debug/debugCallback.h"
 #include "rtERenderer/vulkan/support/checkInstanceExtensionSupport.h"
@@ -717,7 +718,251 @@ enum VkResult rtER_VK_createFramebuffers(
         return VK_SUCCESS;
 }
 
-// TODO: Framebuffers are what renderpasses render to. I need to create one for each swapchain image.
+enum VkResult rtER_VK_createShaderModule(
+        VkShaderModule* dest,
+        VkDevice logicalDevice,
+        unsigned char* code,
+        uint32_t codeSize) {
+        VkShaderModuleCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .codeSize = codeSize,
+                .pCode = (uint32_t*)code
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkCreateShaderModule(
+                        logicalDevice,
+                        &createInfo,
+                        nullptr,
+                        dest
+                ),
+                "Failed to create shader module"
+        );
+
+        return VK_SUCCESS;
+}
+
+enum VkResult rtER_VK_createGraphicsPipeline(
+        VkPipeline* dest,
+        VkDevice logicalDevice,
+        VkRenderPass renderpass,
+        struct rtER_VK_swapchainInfo swapchainInfo
+        ) {
+
+        uint32_t vertexShaderSize;
+        unsigned char* vertexShaderCode = rtER_VK_readShaderSource("shaders/default.vert.spv", &vertexShaderSize);
+
+        uint32_t fragmentShaderSize;
+        unsigned char* fragmentShaderCode = rtER_VK_readShaderSource("shaders/default.frag.spv", &fragmentShaderSize);
+
+        VkShaderModule vertexShaderModule;
+        VkShaderModule fragmentShaderModule;
+
+        rtER_VK_createShaderModule(
+                &vertexShaderModule,
+                logicalDevice,
+                vertexShaderCode,
+                vertexShaderSize);
+
+        rtER_VK_createShaderModule(
+                &fragmentShaderModule,
+                logicalDevice,
+                fragmentShaderCode,
+                fragmentShaderSize);
+
+        free(fragmentShaderCode);
+        free(vertexShaderCode);
+
+        VkPipelineShaderStageCreateInfo shaderStages[2] = {
+                {
+                        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                        .pNext = nullptr,
+                        .flags = 0,
+                        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+                        .module = vertexShaderModule,
+                        .pName = "main",
+                        .pSpecializationInfo = nullptr
+                },
+                {
+                        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+                        .pNext = nullptr,
+                        .flags = 0,
+                        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+                        .module = fragmentShaderModule,
+                        .pName = "main",
+                        .pSpecializationInfo = nullptr
+                }
+        };
+
+        VkPipelineVertexInputStateCreateInfo vertexInputState = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .vertexBindingDescriptionCount = 0,
+                .pVertexBindingDescriptions = nullptr,
+                .vertexAttributeDescriptionCount = 0, // vertices are hardcoded, not needed
+                .pVertexAttributeDescriptions = nullptr,
+
+        };
+
+        VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+                .primitiveRestartEnable = VK_FALSE
+        };
+
+        VkPipelineTessellationStateCreateInfo tesselationState = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .patchControlPoints = 1 // idk what this does but must be > 0
+        };
+
+        VkPipelineRasterizationStateCreateInfo rasterizationState = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .depthClampEnable = VK_FALSE,
+                .rasterizerDiscardEnable = VK_FALSE,
+                .polygonMode = VK_POLYGON_MODE_FILL,
+                .cullMode = VK_CULL_MODE_BACK_BIT,
+                .frontFace = VK_FRONT_FACE_CLOCKWISE,
+                .depthBiasEnable = VK_FALSE,
+                // there are other depth bias fields, but I dont think i need them cuz depth bias is disabled
+                .lineWidth = 1.0
+        };
+
+        VkPipelineMultisampleStateCreateInfo multisampleState = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+                .sampleShadingEnable = VK_FALSE,
+                // there are sample shading fields, but not needded cuz sample shading is off
+                .alphaToCoverageEnable = VK_FALSE,
+                .alphaToOneEnable = VK_FALSE
+        };
+
+        VkPipelineDepthStencilStateCreateInfo depthStencilState = {
+
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .depthTestEnable = VK_FALSE,
+                .depthWriteEnable = VK_FALSE,
+                .depthBoundsTestEnable = VK_FALSE,
+                .stencilTestEnable = VK_FALSE
+                // once again, there are other fields that are only useful when everything isnt disabled
+        };
+
+        VkPipelineColorBlendAttachmentState colorBlendAttachment = {
+                .blendEnable = VK_FALSE,
+                .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+                //...
+        };
+
+        VkPipelineColorBlendStateCreateInfo colorBlendState = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .logicOpEnable = VK_FALSE,
+                .logicOp = VK_LOGIC_OP_COPY,
+                .attachmentCount = 1,
+                .pAttachments = &colorBlendAttachment,
+                //...
+        };
+
+        VkViewport viewport = {
+                .x = 0,
+                .y = 0,
+                .width = swapchainInfo.swapchianExtent.width,
+                .height = swapchainInfo.swapchianExtent.height,
+                .minDepth = 0.0f,
+                .maxDepth = 1.0f
+        };
+
+        VkRect2D scissor = {
+                .offset = {
+                        .x = 0,
+                        .y = 0
+                },
+                .extent = {
+                        .width = swapchainInfo.swapchianExtent.width,
+                        .height = swapchainInfo.swapchianExtent.height
+                }
+        };
+
+        VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .viewportCount = 1,
+                .pViewports = &viewport,
+                .scissorCount = 1,
+                .pScissors = &scissor
+        };
+
+        VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .setLayoutCount = 0,
+                .pSetLayouts = nullptr,
+                .pushConstantRangeCount = 0,
+                .pPushConstantRanges = nullptr
+        };
+
+        VkPipelineLayout layout;
+
+        vkCreatePipelineLayout(
+                logicalDevice,
+                &pipelineLayoutCreateInfo,
+                nullptr,
+                &layout
+        );
+
+        VkGraphicsPipelineCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .stageCount = ARRAY_SIZE(shaderStages),
+                .pStages = shaderStages,
+                .pVertexInputState = &vertexInputState,
+                .pInputAssemblyState = &inputAssemblyState,
+                .pTessellationState = &tesselationState,
+                // TODO: Viewports
+                .pViewportState = &viewportStateCreateInfo,
+                .pRasterizationState = &rasterizationState,
+                .pMultisampleState = &multisampleState,
+                .pDepthStencilState = &depthStencilState,
+                .pColorBlendState = &colorBlendState,
+                // TODO: dynamic viewport and scissor
+                .pDynamicState = nullptr,
+                .layout = layout,
+                .renderPass = renderpass,
+                .subpass = 0,
+                .basePipelineHandle = VK_NULL_HANDLE,
+                .basePipelineIndex = 0
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkCreateGraphicsPipelines(
+                        logicalDevice,
+                        VK_NULL_HANDLE,
+                        1,
+                        &createInfo,
+                        nullptr,
+                        dest),
+                        "Failed to create graphics pipeline"
+        );
+
+        return VK_SUCCESS;
+}
+
 // TODO: Create shader modules
 // TODO: Then, I need to create a graphics pipeline
 // TODO: Create semaphores and fences

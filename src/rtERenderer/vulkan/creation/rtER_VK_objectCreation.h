@@ -90,4 +90,11 @@ enum VkResult rtER_VK_createFramebuffers(
         uint32_t numImageViews,
         struct rtER_VK_swapchainInfo swapchainInfo
         );
+
+enum VkResult rtER_VK_createGraphicsPipeline(
+        VkPipeline* dest,
+        VkDevice logicalDevice,
+        VkRenderPass renderpass,
+        struct rtER_VK_swapchainInfo swapchainInfo
+        );
 #endif // RTER_VK_OBJECTCREATION_H_
