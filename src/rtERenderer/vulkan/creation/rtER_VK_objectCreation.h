@@ -97,4 +97,10 @@ enum VkResult rtER_VK_createGraphicsPipeline(
         VkRenderPass renderpass,
         struct rtER_VK_swapchainInfo swapchainInfo
         );
+
+enum VkResult rtER_VK_createCommandPool(
+        VkCommandPool* dest,
+        VkDevice logicalDevice,
+        struct rtER_VK_queueInfo queueInfo 
+        );
 #endif // RTER_VK_OBJECTCREATION_H_

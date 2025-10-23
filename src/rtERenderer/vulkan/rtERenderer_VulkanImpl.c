@@ -30,6 +30,8 @@ struct rtER_VulkanImpl {
         VkRenderPass renderPass;
         VkFramebuffer* framebuffers; // same length as image views, which is the same as swapchainimagecount
         VkPipeline graphicsPipeline;
+        VkCommandPool commandPool;
+        VkCommandBuffer commandBuffer;
 };
 
  
@@ -130,6 +132,12 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 (*dest)->logicalDevice,
                 (*dest)->renderPass,
                 (*dest)->swapchainInfo
+        );
+
+        rtER_VK_createCommandPool(
+                &(*dest)->commandPool,
+                (*dest)->logicalDevice,
+                (*dest)->queueInfo
         );
 
 

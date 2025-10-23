@@ -20,7 +20,8 @@ VkQueue* rtER_VK_getQueueWithCapabilities(
         for (size_t i = 0; i < queueInfo.queueCount; i++) {
                 if (
                         queueInfo.queueFlags[i].queueFlags == requiredCapabilities.queueFlags &&
-                        queueInfo.queueFlags[i].presentationSupport == requiredCapabilities.presentationSupport
+                        (queueInfo.queueFlags[i].presentationSupport == requiredCapabilities.presentationSupport ||
+                        (requiredCapabilities.presentationSupport == VK_FALSE && queueInfo.queueFlags[i].presentationSupport == VK_TRUE))
                    ) {
                         if (queueFamilyIndex != nullptr) {
                                 *queueFamilyIndex = queueInfo.queueFamilyIndices[i];
@@ -934,7 +935,6 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 .pVertexInputState = &vertexInputState,
                 .pInputAssemblyState = &inputAssemblyState,
                 .pTessellationState = &tesselationState,
-                // TODO: Viewports
                 .pViewportState = &viewportStateCreateInfo,
                 .pRasterizationState = &rasterizationState,
                 .pMultisampleState = &multisampleState,
@@ -958,6 +958,43 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                         nullptr,
                         dest),
                         "Failed to create graphics pipeline"
+        );
+
+        return VK_SUCCESS;
+}
+
+enum VkResult rtER_VK_createCommandPool(
+        VkCommandPool* dest,
+        VkDevice logicalDevice,
+        struct rtER_VK_queueInfo queueInfo 
+        ) {
+
+        struct rtER_VK_queueCapabilities reqCapa = {
+                .queueFlags = VK_QUEUE_GRAPHICS_BIT,
+                .presentationSupport = VK_FALSE
+        };
+
+        uint32_t qfi;
+        rtER_VK_getQueueWithCapabilities(
+                queueInfo,
+                reqCapa,
+                &qfi);
+
+        VkCommandPoolCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                .queueFamilyIndex = qfi
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+               vkCreateCommandPool(
+                logicalDevice,
+                &createInfo,
+                nullptr,
+                dest
+               ),
+               "Failed to create command pool"
         );
 
         return VK_SUCCESS;
