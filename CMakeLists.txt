@@ -55,3 +55,5 @@ if (BUILD_TESTS)
         add_subdirectory(test)
         add_subdirectory(benchmark)
 endif()
+
+compile_shaders("${CMAKE_BINARY_DIR}/$<CONFIG>/shaders")
