@@ -140,6 +140,11 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 (*dest)->queueInfo
         );
 
+        rtER_VK_createCommandBuffer(
+                &(*dest)->commandBuffer,
+                (*dest)->logicalDevice,
+                (*dest)->commandPool
+        );
 
         return rtEErrorCode_SUCCESS;
 }

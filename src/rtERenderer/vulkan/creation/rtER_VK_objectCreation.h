@@ -103,4 +103,11 @@ enum VkResult rtER_VK_createCommandPool(
         VkDevice logicalDevice,
         struct rtER_VK_queueInfo queueInfo 
         );
+
+enum VkResult rtER_VK_createCommandBuffer(
+        VkCommandBuffer* dest,
+        VkDevice logicalDevice,
+        VkCommandPool commandPool
+);
+
 #endif // RTER_VK_OBJECTCREATION_H_

@@ -1000,6 +1000,31 @@ enum VkResult rtER_VK_createCommandPool(
         return VK_SUCCESS;
 }
 
+enum VkResult rtER_VK_createCommandBuffer(
+        VkCommandBuffer* dest,
+        VkDevice logicalDevice,
+        VkCommandPool commandPool
+) {
+        VkCommandBufferAllocateInfo commandBufferInfo = {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+                .pNext = nullptr,
+                .commandPool = commandPool,
+                .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                .commandBufferCount = 1
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkAllocateCommandBuffers(
+                        logicalDevice,
+                        &commandBufferInfo,
+                        dest
+                ),
+                "Failed to create command buffer"
+        );
+
+        return VK_SUCCESS;
+}
+
 // TODO: Create shader modules
 // TODO: Then, I need to create a graphics pipeline
 // TODO: Create semaphores and fences
