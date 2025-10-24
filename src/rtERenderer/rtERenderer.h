@@ -12,5 +12,7 @@ struct rtERenderer;
 
 enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** renderer, struct rtEngineWindow* window, enum rendererImplementationID implID);
 
+void rtER_drawFrame(struct rtERenderer* renderer);
+
 enum rtEErrorCode rtER_cleanupRenderer(struct rtERenderer** renderer);
 #endif // RTERENDERER_H_

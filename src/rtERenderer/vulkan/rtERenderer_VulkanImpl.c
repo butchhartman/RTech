@@ -149,6 +149,97 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
         return rtEErrorCode_SUCCESS;
 }
 
+void rtER_VK_drawFrame(void* vpImpl) {
+        struct rtER_VulkanImpl* VkContext = (struct rtER_VulkanImpl*)vpImpl;
+        uint32_t imageIndex;
+        vkAcquireNextImageKHR(VkContext->logicalDevice, VkContext->swapchain, UINT64_MAX, VK_NULL_HANDLE, VK_NULL_HANDLE, &imageIndex); 
+
+        VkCommandBufferBeginInfo cbBeginInfo = {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                .pNext = nullptr,
+                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+                .pInheritanceInfo = nullptr,
+        };
+
+        vkBeginCommandBuffer(VkContext->commandBuffer, &cbBeginInfo);
+
+        VkClearValue clearValue = {
+                .color = {{0.0f, 0.0f, 0.0f, 0.0f}}
+        };
+
+        VkRenderPassBeginInfo renderPassBegin = {
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                .pNext = nullptr,
+                .renderPass = VkContext->renderPass,
+                .framebuffer = VkContext->framebuffers[imageIndex],
+                .renderArea = {
+                        .extent = {
+                                .width = VkContext->swapchainInfo.swapchianExtent.width,
+                                .height = VkContext->swapchainInfo.swapchianExtent.height
+                        },
+                        .offset = {
+                                .x = 0,
+                                .y = 0
+                        }
+                },
+                .clearValueCount = 1,
+                .pClearValues = &clearValue
+        };
+
+        vkCmdBeginRenderPass(VkContext->commandBuffer, &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(VkContext->commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext->graphicsPipeline);
+
+        vkCmdDraw(VkContext->commandBuffer, 3, 1, 0, 0);
+
+        vkCmdEndRenderPass(VkContext->commandBuffer);
+
+        vkEndCommandBuffer(VkContext->commandBuffer);
+
+        VkPipelineStageFlags waitStage = {
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+        };
+
+        VkSubmitInfo submitInfo = {
+                .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+                .waitSemaphoreCount = 0,
+                .pWaitDstStageMask = &waitStage,
+                .commandBufferCount = 1,
+                .pCommandBuffers = &VkContext->commandBuffer,
+                .signalSemaphoreCount = 0
+        };
+        struct rtER_VK_queueCapabilities reqCapabilities = {
+                .queueFlags = VK_QUEUE_GRAPHICS_BIT,
+                .presentationSupport = VK_FALSE
+        };
+        uint32_t queueIndex;
+        VkQueue* graphicsq = rtER_VK_getQueueWithCapabilities(
+                VkContext->queueInfo,
+                reqCapabilities,
+                &queueIndex
+                );
+
+        vkQueueSubmit(*graphicsq, 1, &submitInfo, VK_NULL_HANDLE);
+
+        VkPresentInfoKHR present = {
+                .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+                .pNext = nullptr,
+                .waitSemaphoreCount = 0,
+                .swapchainCount = 1,
+                .pSwapchains = &VkContext->swapchain,
+                .pImageIndices = &imageIndex
+        };
+        reqCapabilities.presentationSupport = VK_TRUE;
+        graphicsq = rtER_VK_getQueueWithCapabilities(
+                VkContext->queueInfo,
+                reqCapabilities,
+                &queueIndex
+                );
+
+        vkQueuePresentKHR(*graphicsq, &present);
+
+}
+
 enum rtEErrorCode rtER_VK_cleanupRenderer(void** ptr) {
         struct rtER_VulkanImpl** implPtr = (struct rtER_VulkanImpl**)ptr; 
         vkDestroyInstance((*implPtr)->instance, nullptr);
