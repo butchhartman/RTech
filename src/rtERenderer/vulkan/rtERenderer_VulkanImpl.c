@@ -180,14 +180,25 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 VK_TRUE,
                 UINT64_MAX
                 );
+
+        uint32_t imageIndex;
+        enum VkResult imageAcquireResult = vkAcquireNextImageKHR(VkContext->logicalDevice, VkContext->swapchain, UINT64_MAX, VkContext->imageAvaiableSemaphore, VK_NULL_HANDLE, &imageIndex); 
+
+        switch (imageAcquireResult) {
+                case(VK_ERROR_OUT_OF_DATE_KHR):
+                        // do recreation shenaneghans
+                        return;
+                        break;
+                default:
+                        break;
+        }
+
+        // Reset fences only after swapchain is confirmed to be ok to avoid infinite hanging
         vkResetFences(
                 VkContext->logicalDevice,
                 1,
                 &VkContext->queueExecuteFence 
-                );
-
-        uint32_t imageIndex;
-        vkAcquireNextImageKHR(VkContext->logicalDevice, VkContext->swapchain, UINT64_MAX, VkContext->imageAvaiableSemaphore, VK_NULL_HANDLE, &imageIndex); 
+        );
 
         VkCommandBufferBeginInfo cbBeginInfo = {
                 .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
