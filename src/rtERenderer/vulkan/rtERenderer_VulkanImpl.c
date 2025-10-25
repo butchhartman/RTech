@@ -32,8 +32,9 @@ struct rtER_VulkanImpl {
         VkPipeline graphicsPipeline;
         VkCommandPool commandPool;
         VkCommandBuffer commandBuffer;
-        VkFence imageAvailableFence;
-        VkFence renderingFinishedFence;
+        VkFence queueExecuteFence;
+        VkSemaphore imageAvaiableSemaphore;
+        VkSemaphore renderingFinishedSemaphores[2];
 };
 
  
@@ -149,12 +150,20 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
         );
 
         rtER_VK_createFence(
-                &(*dest)->renderingFinishedFence,
+                &(*dest)->queueExecuteFence,
                 (*dest)->logicalDevice
                 );
 
-        rtER_VK_createFence(
-                &(*dest)->imageAvailableFence,
+        rtER_VK_createSemaphore(
+                &(*dest)->renderingFinishedSemaphores[0],
+                (*dest)->logicalDevice
+                );
+        rtER_VK_createSemaphore(
+                &(*dest)->renderingFinishedSemaphores[1],
+                (*dest)->logicalDevice
+                );
+        rtER_VK_createSemaphore(
+                &(*dest)->imageAvaiableSemaphore,
                 (*dest)->logicalDevice
                 );
 
@@ -167,22 +176,18 @@ void rtER_VK_drawFrame(void* vpImpl) {
         vkWaitForFences(
                 VkContext->logicalDevice,
                 1,
-                &VkContext->renderingFinishedFence,
+                &VkContext->queueExecuteFence,
                 VK_TRUE,
                 UINT64_MAX
                 );
-        VkFence fences[] = {
-                VkContext->renderingFinishedFence,
-                VkContext->imageAvailableFence
-        };
         vkResetFences(
                 VkContext->logicalDevice,
-                2,
-                fences
+                1,
+                &VkContext->queueExecuteFence 
                 );
 
         uint32_t imageIndex;
-        vkAcquireNextImageKHR(VkContext->logicalDevice, VkContext->swapchain, UINT64_MAX, VK_NULL_HANDLE, VkContext->imageAvailableFence, &imageIndex); 
+        vkAcquireNextImageKHR(VkContext->logicalDevice, VkContext->swapchain, UINT64_MAX, VkContext->imageAvaiableSemaphore, VK_NULL_HANDLE, &imageIndex); 
 
         VkCommandBufferBeginInfo cbBeginInfo = {
                 .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -232,13 +237,13 @@ void rtER_VK_drawFrame(void* vpImpl) {
 
         VkSubmitInfo submitInfo = {
                 .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-                .waitSemaphoreCount = 0,
-                .pWaitSemaphores = nullptr,
+                .waitSemaphoreCount = 1,
+                .pWaitSemaphores = &VkContext->imageAvaiableSemaphore,
                 .pWaitDstStageMask = &waitStage,
                 .commandBufferCount = 1,
                 .pCommandBuffers = &VkContext->commandBuffer,
-                .signalSemaphoreCount = 0,
-                .pSignalSemaphores = nullptr
+                .signalSemaphoreCount = 1,
+                .pSignalSemaphores = &VkContext->renderingFinishedSemaphores[imageIndex]
         };
         struct rtER_VK_queueCapabilities reqCapabilities = {
                 .queueFlags = VK_QUEUE_GRAPHICS_BIT,
@@ -251,26 +256,18 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 &queueIndex
                 );
         
-        vkWaitForFences(
-                VkContext->logicalDevice,
-                1,
-                &VkContext->imageAvailableFence,
-                VK_TRUE,
-                UINT64_MAX
-                );
-
-
-        vkQueueSubmit(*graphicsq, 1, &submitInfo, VkContext->renderingFinishedFence);
+        vkQueueSubmit(*graphicsq, 1, &submitInfo, VkContext->queueExecuteFence);
 
         VkPresentInfoKHR present = {
                 .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
                 .pNext = nullptr,
-                .waitSemaphoreCount = 0,
-                .pWaitSemaphores = nullptr,
+                .waitSemaphoreCount = 1,
+                .pWaitSemaphores = &VkContext->renderingFinishedSemaphores[imageIndex],
                 .swapchainCount = 1,
                 .pSwapchains = &VkContext->swapchain,
                 .pImageIndices = &imageIndex,
         };
+
         reqCapabilities.presentationSupport = VK_TRUE;
         graphicsq = rtER_VK_getQueueWithCapabilities(
                 VkContext->queueInfo,
@@ -283,6 +280,7 @@ void rtER_VK_drawFrame(void* vpImpl) {
 
 enum rtEErrorCode rtER_VK_cleanupRenderer(void** ptr) {
         struct rtER_VulkanImpl** implPtr = (struct rtER_VulkanImpl**)ptr; 
+        vkDeviceWaitIdle((*implPtr)->logicalDevice);
         vkDestroyInstance((*implPtr)->instance, nullptr);
 
         free(*implPtr);
