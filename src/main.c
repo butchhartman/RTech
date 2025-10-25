@@ -27,9 +27,9 @@ int main() {
 
         rtEW_showWindow(window);  
 
-                rtER_drawFrame(renderer);
         rtELog_log("Beginning main loop");
         while(!rtEW_windowShouldClose(window)) {
+                rtER_drawFrame(renderer);
         }
 
         rtELog_log("Cleaning up resources");

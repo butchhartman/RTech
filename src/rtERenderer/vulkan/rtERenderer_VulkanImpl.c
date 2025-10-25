@@ -32,6 +32,8 @@ struct rtER_VulkanImpl {
         VkPipeline graphicsPipeline;
         VkCommandPool commandPool;
         VkCommandBuffer commandBuffer;
+        VkFence imageAvailableFence;
+        VkFence renderingFinishedFence;
 };
 
  
@@ -146,13 +148,41 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 (*dest)->commandPool
         );
 
+        rtER_VK_createFence(
+                &(*dest)->renderingFinishedFence,
+                (*dest)->logicalDevice
+                );
+
+        rtER_VK_createFence(
+                &(*dest)->imageAvailableFence,
+                (*dest)->logicalDevice
+                );
+
         return rtEErrorCode_SUCCESS;
 }
 
 void rtER_VK_drawFrame(void* vpImpl) {
         struct rtER_VulkanImpl* VkContext = (struct rtER_VulkanImpl*)vpImpl;
+
+        vkWaitForFences(
+                VkContext->logicalDevice,
+                1,
+                &VkContext->renderingFinishedFence,
+                VK_TRUE,
+                UINT64_MAX
+                );
+        VkFence fences[] = {
+                VkContext->renderingFinishedFence,
+                VkContext->imageAvailableFence
+        };
+        vkResetFences(
+                VkContext->logicalDevice,
+                2,
+                fences
+                );
+
         uint32_t imageIndex;
-        vkAcquireNextImageKHR(VkContext->logicalDevice, VkContext->swapchain, UINT64_MAX, VK_NULL_HANDLE, VK_NULL_HANDLE, &imageIndex); 
+        vkAcquireNextImageKHR(VkContext->logicalDevice, VkContext->swapchain, UINT64_MAX, VK_NULL_HANDLE, VkContext->imageAvailableFence, &imageIndex); 
 
         VkCommandBufferBeginInfo cbBeginInfo = {
                 .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -171,7 +201,7 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 .pNext = nullptr,
                 .renderPass = VkContext->renderPass,
-                .framebuffer = VkContext->framebuffers[imageIndex],
+                .framebuffer = VkContext->framebuffers[imageIndex], 
                 .renderArea = {
                         .extent = {
                                 .width = VkContext->swapchainInfo.swapchianExtent.width,
@@ -203,10 +233,12 @@ void rtER_VK_drawFrame(void* vpImpl) {
         VkSubmitInfo submitInfo = {
                 .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                 .waitSemaphoreCount = 0,
+                .pWaitSemaphores = nullptr,
                 .pWaitDstStageMask = &waitStage,
                 .commandBufferCount = 1,
                 .pCommandBuffers = &VkContext->commandBuffer,
-                .signalSemaphoreCount = 0
+                .signalSemaphoreCount = 0,
+                .pSignalSemaphores = nullptr
         };
         struct rtER_VK_queueCapabilities reqCapabilities = {
                 .queueFlags = VK_QUEUE_GRAPHICS_BIT,
@@ -218,16 +250,26 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 reqCapabilities,
                 &queueIndex
                 );
+        
+        vkWaitForFences(
+                VkContext->logicalDevice,
+                1,
+                &VkContext->imageAvailableFence,
+                VK_TRUE,
+                UINT64_MAX
+                );
 
-        vkQueueSubmit(*graphicsq, 1, &submitInfo, VK_NULL_HANDLE);
+
+        vkQueueSubmit(*graphicsq, 1, &submitInfo, VkContext->renderingFinishedFence);
 
         VkPresentInfoKHR present = {
                 .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
                 .pNext = nullptr,
                 .waitSemaphoreCount = 0,
+                .pWaitSemaphores = nullptr,
                 .swapchainCount = 1,
                 .pSwapchains = &VkContext->swapchain,
-                .pImageIndices = &imageIndex
+                .pImageIndices = &imageIndex,
         };
         reqCapabilities.presentationSupport = VK_TRUE;
         graphicsq = rtER_VK_getQueueWithCapabilities(
@@ -237,7 +279,6 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 );
 
         vkQueuePresentKHR(*graphicsq, &present);
-
 }
 
 enum rtEErrorCode rtER_VK_cleanupRenderer(void** ptr) {

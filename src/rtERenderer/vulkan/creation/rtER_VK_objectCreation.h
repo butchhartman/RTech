@@ -110,4 +110,14 @@ enum VkResult rtER_VK_createCommandBuffer(
         VkCommandPool commandPool
 );
 
+enum VkResult rtER_VK_createFence(
+                VkFence* dest,
+                VkDevice logicalDevice
+        );
+
+enum VkResult rtER_VK_createSemaphore(
+                VkSemaphore *dest,
+                VkDevice logicalDevice
+        );
+
 #endif // RTER_VK_OBJECTCREATION_H_

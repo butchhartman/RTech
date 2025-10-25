@@ -1025,6 +1025,52 @@ enum VkResult rtER_VK_createCommandBuffer(
         return VK_SUCCESS;
 }
 
+enum VkResult rtER_VK_createFence(
+                VkFence* dest,
+                VkDevice logicalDevice
+        ) {
+       VkFenceCreateInfo createInfo = {
+               .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+               .pNext = nullptr,
+               .flags = VK_FENCE_CREATE_SIGNALED_BIT
+       };
+
+       VK_ERROR_LOG_AND_RETURN(
+                vkCreateFence(
+                        logicalDevice,
+                        &createInfo,
+                        nullptr,
+                        dest
+                ),
+                "Failed to create fence"
+       );
+        
+        return VK_SUCCESS;
+}
+
+enum VkResult rtER_VK_createSemaphore(
+                VkSemaphore *dest,
+                VkDevice logicalDevice
+        ) {
+        VkSemaphoreCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkCreateSemaphore(
+                        logicalDevice,
+                        &createInfo,
+                        nullptr,
+                        dest
+                        ),
+                "Failed to create semaphore"
+                );
+
+        return VK_SUCCESS;
+}
+
 // TODO: Create shader modules
 // TODO: Then, I need to create a graphics pipeline
 // TODO: Create semaphores and fences
