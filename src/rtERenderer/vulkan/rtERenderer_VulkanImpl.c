@@ -13,6 +13,8 @@
 #include <vulkan/vulkan.h>
 #include <stdlib.h>
 
+constexpr size_t MAX_CONCURRENT_FRAMES = 2;
+
 struct rtER_VulkanImpl { 
         struct rtEngineWindow* window;
         uint32_t apiVersion; 
@@ -31,10 +33,11 @@ struct rtER_VulkanImpl {
         VkFramebuffer* framebuffers; // same length as image views, which is the same as swapchainimagecount
         VkPipeline graphicsPipeline;
         VkCommandPool commandPool;
-        VkCommandBuffer commandBuffer;
-        VkFence queueExecuteFence;
-        VkSemaphore imageAvaiableSemaphore;
-        VkSemaphore renderingFinishedSemaphores[2];
+        VkCommandBuffer commandBuffer[MAX_CONCURRENT_FRAMES];
+        VkFence queueExecuteFence[MAX_CONCURRENT_FRAMES];
+        VkSemaphore imageAvaiableSemaphore[MAX_CONCURRENT_FRAMES];
+        VkSemaphore renderingFinishedSemaphores[2]; // needs to be swapchain image count to have a semaphore fore each image. Hardcoded to 2 but could be less.
+        size_t currentFrame;
 };
 
  
@@ -144,13 +147,23 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
         );
 
         rtER_VK_createCommandBuffer(
-                &(*dest)->commandBuffer,
+                &(*dest)->commandBuffer[0],
+                (*dest)->logicalDevice,
+                (*dest)->commandPool
+        );
+
+        rtER_VK_createCommandBuffer(
+                &(*dest)->commandBuffer[1],
                 (*dest)->logicalDevice,
                 (*dest)->commandPool
         );
 
         rtER_VK_createFence(
-                &(*dest)->queueExecuteFence,
+                &(*dest)->queueExecuteFence[0],
+                (*dest)->logicalDevice
+                );
+        rtER_VK_createFence(
+                &(*dest)->queueExecuteFence[1],
                 (*dest)->logicalDevice
                 );
 
@@ -162,10 +175,17 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 &(*dest)->renderingFinishedSemaphores[1],
                 (*dest)->logicalDevice
                 );
+
         rtER_VK_createSemaphore(
-                &(*dest)->imageAvaiableSemaphore,
+                &(*dest)->imageAvaiableSemaphore[0],
                 (*dest)->logicalDevice
                 );
+        rtER_VK_createSemaphore(
+                &(*dest)->imageAvaiableSemaphore[1],
+                (*dest)->logicalDevice
+                );
+
+        (*dest)->currentFrame = 0;
 
         return rtEErrorCode_SUCCESS;
 }
@@ -176,17 +196,17 @@ void rtER_VK_drawFrame(void* vpImpl) {
         vkWaitForFences(
                 VkContext->logicalDevice,
                 1,
-                &VkContext->queueExecuteFence,
+                &VkContext->queueExecuteFence[VkContext->currentFrame],
                 VK_TRUE,
                 UINT64_MAX
                 );
 
         uint32_t imageIndex;
-        enum VkResult imageAcquireResult = vkAcquireNextImageKHR(VkContext->logicalDevice, VkContext->swapchain, UINT64_MAX, VkContext->imageAvaiableSemaphore, VK_NULL_HANDLE, &imageIndex); 
+        enum VkResult imageAcquireResult = vkAcquireNextImageKHR(VkContext->logicalDevice, VkContext->swapchain, UINT64_MAX, VkContext->imageAvaiableSemaphore[VkContext->currentFrame], VK_NULL_HANDLE, &imageIndex); 
 
         switch (imageAcquireResult) {
                 case(VK_ERROR_OUT_OF_DATE_KHR):
-                        // do recreation shenaneghans
+                        // do recreation shenaneghans when I get around to it
                         return;
                         break;
                 default:
@@ -197,7 +217,7 @@ void rtER_VK_drawFrame(void* vpImpl) {
         vkResetFences(
                 VkContext->logicalDevice,
                 1,
-                &VkContext->queueExecuteFence 
+                &VkContext->queueExecuteFence[VkContext->currentFrame] 
         );
 
         VkCommandBufferBeginInfo cbBeginInfo = {
@@ -207,7 +227,7 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 .pInheritanceInfo = nullptr,
         };
 
-        vkBeginCommandBuffer(VkContext->commandBuffer, &cbBeginInfo);
+        vkBeginCommandBuffer(VkContext->commandBuffer[VkContext->currentFrame], &cbBeginInfo);
 
         VkClearValue clearValue = {
                 .color = {{0.0f, 0.0f, 0.0f, 0.0f}}
@@ -232,15 +252,15 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 .pClearValues = &clearValue
         };
 
-        vkCmdBeginRenderPass(VkContext->commandBuffer, &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(VkContext->commandBuffer[VkContext->currentFrame], &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
 
-        vkCmdBindPipeline(VkContext->commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext->graphicsPipeline);
+        vkCmdBindPipeline(VkContext->commandBuffer[VkContext->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext->graphicsPipeline);
 
-        vkCmdDraw(VkContext->commandBuffer, 3, 1, 0, 0);
+        vkCmdDraw(VkContext->commandBuffer[VkContext->currentFrame], 3, 1, 0, 0);
 
-        vkCmdEndRenderPass(VkContext->commandBuffer);
+        vkCmdEndRenderPass(VkContext->commandBuffer[VkContext->currentFrame]);
 
-        vkEndCommandBuffer(VkContext->commandBuffer);
+        vkEndCommandBuffer(VkContext->commandBuffer[VkContext->currentFrame]);
 
         VkPipelineStageFlags waitStage = {
                 VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
@@ -249,12 +269,12 @@ void rtER_VK_drawFrame(void* vpImpl) {
         VkSubmitInfo submitInfo = {
                 .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                 .waitSemaphoreCount = 1,
-                .pWaitSemaphores = &VkContext->imageAvaiableSemaphore,
+                .pWaitSemaphores = &VkContext->imageAvaiableSemaphore[VkContext->currentFrame],
                 .pWaitDstStageMask = &waitStage,
                 .commandBufferCount = 1,
-                .pCommandBuffers = &VkContext->commandBuffer,
+                .pCommandBuffers = &VkContext->commandBuffer[VkContext->currentFrame],
                 .signalSemaphoreCount = 1,
-                .pSignalSemaphores = &VkContext->renderingFinishedSemaphores[imageIndex]
+                .pSignalSemaphores = &VkContext->renderingFinishedSemaphores[imageIndex] // image index
         };
         struct rtER_VK_queueCapabilities reqCapabilities = {
                 .queueFlags = VK_QUEUE_GRAPHICS_BIT,
@@ -267,7 +287,7 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 &queueIndex
                 );
         
-        vkQueueSubmit(*graphicsq, 1, &submitInfo, VkContext->queueExecuteFence);
+        vkQueueSubmit(*graphicsq, 1, &submitInfo, VkContext->queueExecuteFence[VkContext->currentFrame]);
 
         VkPresentInfoKHR present = {
                 .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -287,6 +307,8 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 );
 
         vkQueuePresentKHR(*graphicsq, &present);
+
+        VkContext->currentFrame = (VkContext->currentFrame + 1) % MAX_CONCURRENT_FRAMES;
 }
 
 enum rtEErrorCode rtER_VK_cleanupRenderer(void** ptr) {
