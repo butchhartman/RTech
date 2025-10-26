@@ -2,6 +2,10 @@
 #define RTER_VK_OBJECTCREATION_H_
 #include <vulkan/vulkan.h>
 
+struct vertex {
+        float x, y, z;
+};
+
 struct rtER_VK_Buffer {
         VkBuffer buffer;
         VkDeviceMemory bufferDeviceMemory;
@@ -137,5 +141,14 @@ enum VkResult rtER_VK_createBuffer(
         size_t queueCount,
         uint32_t* qfi,
         VkMemoryPropertyFlags memoryProperties
+        );
+
+enum VkResult rtER_VK_bufferData(
+        struct vertex* data,
+        VkDevice logicalDevice,
+        VkDeviceMemory deviceMemory,
+        VkDeviceSize offset,
+        VkDeviceSize sizeToMap,
+        VkMemoryMapFlags flags
         );
 #endif // RTER_VK_OBJECTCREATION_H_

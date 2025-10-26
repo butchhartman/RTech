@@ -13,6 +13,7 @@
 
 // I'm going to use the 1.0 version of Vulkan here so I can understand how everything fits together (also bonues compatibility but i dont think that is really a concern). Once that is done, I will upgrade to future versions as I see fit.
 
+
 VkQueue* rtER_VK_getQueueWithCapabilities(
         struct rtER_VK_queueInfo queueInfo, 
         struct rtER_VK_queueCapabilities requiredCapabilities, 
@@ -797,14 +798,27 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 }
         };
 
+        VkVertexInputBindingDescription inputBinding = {
+                .binding = 0,
+                .stride = sizeof(struct vertex),
+                .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        };
+
+        VkVertexInputAttributeDescription inputAttrib = {
+                .location = 0,
+                .binding = inputBinding.binding,
+                .format = VK_FORMAT_R32G32B32_SFLOAT,
+                .offset = 0
+        };
+
         VkPipelineVertexInputStateCreateInfo vertexInputState = {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = 0,
-                .vertexBindingDescriptionCount = 0,
-                .pVertexBindingDescriptions = nullptr,
-                .vertexAttributeDescriptionCount = 0, // vertices are hardcoded, not needed
-                .pVertexAttributeDescriptions = nullptr,
+                .vertexBindingDescriptionCount = 1,
+                .pVertexBindingDescriptions = &inputBinding,
+                .vertexAttributeDescriptionCount = 1, // vertices are hardcoded, not needed
+                .pVertexAttributeDescriptions = &inputAttrib,
 
         };
 
@@ -1172,6 +1186,43 @@ enum VkResult rtER_VK_createBuffer(
         return VK_SUCCESS;
 }
 
-// TODO: Create shader modules
-// TODO: Then, I need to create a graphics pipeline
-// TODO: Create semaphores and fences
+enum VkResult rtER_VK_bufferData(
+        struct vertex* data,
+        VkDevice logicalDevice,
+        VkDeviceMemory deviceMemory,
+        VkDeviceSize offset,
+        VkDeviceSize sizeToMap,
+        VkMemoryMapFlags flags
+        ) {
+
+        void* pData;
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkMapMemory(
+                        logicalDevice,
+                        deviceMemory,
+                        offset,
+                        sizeToMap,
+                        flags,
+                        &pData
+                        ),
+                "Failed to map device memory"
+                );
+        
+        // memory is now mapped and can be written to via pData
+        errno_t err = 
+                memcpy_s(pData, sizeToMap, data, sizeToMap); // Dangerous!
+
+        if (err != 0) {
+                rtELog_logError("Failed to copy memory to device memory");
+                return VK_ERROR_MEMORY_MAP_FAILED;
+        }
+
+        vkUnmapMemory(
+                logicalDevice,
+                deviceMemory
+                );
+
+
+        return VK_SUCCESS;
+}

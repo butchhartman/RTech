@@ -14,7 +14,6 @@
 #include <stdlib.h>
 
 
-
 constexpr size_t MAX_CONCURRENT_FRAMES = 2;
 
 struct rtER_VulkanImpl { 
@@ -190,7 +189,7 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
 
         rtER_VK_createBuffer(
                 &(*dest)->vertexBuffer,
-                128,
+                sizeof(struct vertex) * 3,
                 (*dest)->logicalDevice,
                 (*dest)->physDevice,
                 0,
@@ -200,6 +199,21 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 nullptr,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
                 );
+
+        struct vertex vertices[3] = {
+                {0.0, 0.5, 1.0},
+                {-0.5, -0.5, 1.0}, // I may be stupid... watch out for culling...
+                {0.5, -0.5, 1.0},
+        };
+
+        rtER_VK_bufferData(
+                vertices,
+                (*dest)->logicalDevice,
+                (*dest)->vertexBuffer.bufferDeviceMemory,
+                0,
+                sizeof(struct vertex) * 3,
+                0
+        );
 
         (*dest)->currentFrame = 0;
 
@@ -273,6 +287,7 @@ void rtER_VK_drawFrame(void* vpImpl) {
         vkCmdBindPipeline(VkContext->commandBuffer[VkContext->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext->graphicsPipeline);
         
         VkDeviceSize offset = 0;
+        // TODO: Add mechanism for writing to this vertex buffer and update shaders to read from it
         vkCmdBindVertexBuffers(
                 VkContext->commandBuffer[VkContext->currentFrame],
                 0,
