@@ -13,6 +13,8 @@
 #include <vulkan/vulkan.h>
 #include <stdlib.h>
 
+
+
 constexpr size_t MAX_CONCURRENT_FRAMES = 2;
 
 struct rtER_VulkanImpl { 
@@ -38,6 +40,7 @@ struct rtER_VulkanImpl {
         VkSemaphore imageAvaiableSemaphore[MAX_CONCURRENT_FRAMES];
         VkSemaphore renderingFinishedSemaphores[2]; // needs to be swapchain image count to have a semaphore fore each image. Hardcoded to 2 but could be less.
         size_t currentFrame;
+        struct rtER_VK_Buffer vertexBuffer;
 };
 
  
@@ -185,6 +188,19 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 (*dest)->logicalDevice
                 );
 
+        rtER_VK_createBuffer(
+                &(*dest)->vertexBuffer,
+                128,
+                (*dest)->logicalDevice,
+                (*dest)->physDevice,
+                0,
+                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                VK_SHARING_MODE_EXCLUSIVE,
+                0,
+                nullptr,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                );
+
         (*dest)->currentFrame = 0;
 
         return rtEErrorCode_SUCCESS;
@@ -255,6 +271,15 @@ void rtER_VK_drawFrame(void* vpImpl) {
         vkCmdBeginRenderPass(VkContext->commandBuffer[VkContext->currentFrame], &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
 
         vkCmdBindPipeline(VkContext->commandBuffer[VkContext->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext->graphicsPipeline);
+        
+        VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(
+                VkContext->commandBuffer[VkContext->currentFrame],
+                0,
+                1,
+                &VkContext->vertexBuffer.buffer,
+                &offset
+        );
 
         vkCmdDraw(VkContext->commandBuffer[VkContext->currentFrame], 3, 1, 0, 0);
 

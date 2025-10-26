@@ -1071,6 +1071,107 @@ enum VkResult rtER_VK_createSemaphore(
         return VK_SUCCESS;
 }
 
+static int64_t findMemoryTypeIndex(
+        VkPhysicalDevice physDevice,
+        VkMemoryPropertyFlags reqMemProps
+        ) {
+
+        VkPhysicalDeviceMemoryProperties memProps;
+        vkGetPhysicalDeviceMemoryProperties(
+                physDevice,
+                &memProps
+        );
+
+        for (int64_t i = 0; i < memProps.memoryTypeCount; i++) {
+                if ((memProps.memoryTypes[i].propertyFlags & reqMemProps) == reqMemProps) {
+                        return i;
+                }
+        }
+
+
+        return -1; // failure
+}
+
+
+enum VkResult rtER_VK_createBuffer(
+        struct rtER_VK_Buffer* dest,
+        size_t size,
+        VkDevice logicalDevice,
+        VkPhysicalDevice physDevice,
+        VkBufferCreateFlags flags,
+        VkBufferUsageFlags usage,
+        VkSharingMode sharingMode,
+        size_t queueCount,
+        uint32_t* qfi,
+        VkMemoryPropertyFlags memoryProperties
+) {
+        VkBufferCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = flags,
+                .size = size,
+                .usage = usage,
+                .sharingMode = sharingMode,
+                .queueFamilyIndexCount = queueCount,
+                .pQueueFamilyIndices = qfi
+        };
+
+        VkBuffer buffer;
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkCreateBuffer(
+                        logicalDevice,
+                        &createInfo,
+                        nullptr,
+                        &buffer
+                ),
+                "Failed to create buffer"
+        );
+
+        VkMemoryRequirements memReqs;
+        vkGetBufferMemoryRequirements(
+                logicalDevice,
+                buffer,
+                &memReqs
+        );
+
+        int64_t memoryTypeIndex = findMemoryTypeIndex(
+                                        physDevice,
+                                        memoryProperties);
+        VkMemoryAllocateInfo allocInfo = {
+                .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                .pNext = nullptr,
+                .allocationSize = memReqs.size,
+                .memoryTypeIndex = memoryTypeIndex
+        };
+
+        VkDeviceMemory memory;
+        VK_ERROR_LOG_AND_RETURN(
+                vkAllocateMemory(
+                        logicalDevice,
+                        &allocInfo,
+                        nullptr,
+                        &memory
+                ),
+                "Failed to allocate device memory"
+        );
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkBindBufferMemory(
+                        logicalDevice,
+                        buffer,
+                        memory,
+                        0),
+                        "Failed to bind buffer memory"
+                        );
+
+        dest->buffer = buffer;
+        dest->bufferDeviceMemory = memory;
+        dest->bufferSize = size;
+
+        return VK_SUCCESS;
+}
+
 // TODO: Create shader modules
 // TODO: Then, I need to create a graphics pipeline
 // TODO: Create semaphores and fences

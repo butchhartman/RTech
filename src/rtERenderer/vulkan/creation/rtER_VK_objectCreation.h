@@ -2,6 +2,12 @@
 #define RTER_VK_OBJECTCREATION_H_
 #include <vulkan/vulkan.h>
 
+struct rtER_VK_Buffer {
+        VkBuffer buffer;
+        VkDeviceMemory bufferDeviceMemory;
+        size_t bufferSize;
+};
+
 struct rtER_VK_swapchainInfo {
         VkFormat imageFormat;
         VkExtent2D swapchianExtent;
@@ -120,4 +126,16 @@ enum VkResult rtER_VK_createSemaphore(
                 VkDevice logicalDevice
         );
 
+enum VkResult rtER_VK_createBuffer(
+        struct rtER_VK_Buffer* dest,
+        size_t size,
+        VkDevice logicalDevice,
+        VkPhysicalDevice physDevice,
+        VkBufferCreateFlags flags,
+        VkBufferUsageFlags usage,
+        VkSharingMode sharingMode,
+        size_t queueCount,
+        uint32_t* qfi,
+        VkMemoryPropertyFlags memoryProperties
+        );
 #endif // RTER_VK_OBJECTCREATION_H_
