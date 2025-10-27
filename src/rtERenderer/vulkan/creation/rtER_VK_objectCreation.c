@@ -893,9 +893,9 @@ enum VkResult rtER_VK_createGraphicsPipeline(
 
         VkViewport viewport = {
                 .x = 0,
-                .y = 0,
+                .y = swapchainInfo.swapchianExtent.height, // Changes origin to lower left corner
                 .width = swapchainInfo.swapchianExtent.width,
-                .height = swapchainInfo.swapchianExtent.height,
+                .height = -((float)swapchainInfo.swapchianExtent.height), // Changes viewport so < 0 is down and > 0 is up
                 .minDepth = 0.0f,
                 .maxDepth = 1.0f
         };
