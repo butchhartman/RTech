@@ -228,17 +228,23 @@ void rtER_VK_bufferVertexData(void* vkImpl, void* data, size_t elementSize, size
 
         if (vkContext->vertexBuffer.bufferSize < elementSize * elementCount) {
                 // destroy current buffer and create new sufficiently sized buffer
-                vkFreeMemory(
-                        vkContext->logicalDevice,
-                        vkContext->vertexBuffer.bufferDeviceMemory,
-                        nullptr);
-
+                struct rtER_VK_queueCapabilities queueCaps = {
+                        .queueFlags = VK_QUEUE_GRAPHICS_BIT,
+                        .presentationSupport = VK_FALSE
+                };
+                uint32_t queueIndex;
+        vkQueueWaitIdle(*rtER_VK_getQueueWithCapabilities(vkContext->queueInfo, queueCaps, &queueIndex));
                 vkDestroyBuffer(
                         vkContext->logicalDevice,
                         vkContext->vertexBuffer.buffer,
                         nullptr
                         );
                 
+                vkFreeMemory(
+                        vkContext->logicalDevice,
+                        vkContext->vertexBuffer.bufferDeviceMemory,
+                        nullptr);
+
                 rtER_VK_createBuffer(
                         &vkContext->vertexBuffer,
                         elementSize * elementCount,
