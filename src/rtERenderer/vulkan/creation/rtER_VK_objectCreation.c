@@ -1209,8 +1209,12 @@ enum VkResult rtER_VK_bufferData(
                 "Failed to map device memory"
                 );
         
+        errno_t err;
+        // when overwriting data that exists in buffer, memsetting seems prudent
+        memset(pData, 0, sizeToMap);
+
         // memory is now mapped and can be written to via pData
-        errno_t err = 
+        err = 
                 memcpy_s(pData, sizeToMap, data, sizeToMap); // Dangerous!
 
         if (err != 0) {

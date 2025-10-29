@@ -223,6 +223,47 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
         return rtEErrorCode_SUCCESS;
 }
 
+void rtER_VK_bufferVertexData(void* vkImpl, void* data, size_t elementSize, size_t elementCount) {
+        struct rtER_VulkanImpl* vkContext = (struct rtER_VulkanImpl*)vkImpl;
+
+        if (vkContext->vertexBuffer.bufferSize < elementSize * elementCount) {
+                // destroy current buffer and create new sufficiently sized buffer
+                vkFreeMemory(
+                        vkContext->logicalDevice,
+                        vkContext->vertexBuffer.bufferDeviceMemory,
+                        nullptr);
+
+                vkDestroyBuffer(
+                        vkContext->logicalDevice,
+                        vkContext->vertexBuffer.buffer,
+                        nullptr
+                        );
+                
+                rtER_VK_createBuffer(
+                        &vkContext->vertexBuffer,
+                        elementSize * elementCount,
+                        vkContext->logicalDevice,
+                        vkContext->physDevice,
+                        0,
+                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                        VK_SHARING_MODE_EXCLUSIVE,
+                        0,
+                        nullptr,
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                );
+        }
+        
+        // buffer data to buffer
+        rtER_VK_bufferData(
+                data,
+                vkContext->logicalDevice,
+                vkContext->vertexBuffer.bufferDeviceMemory,
+                0,
+                elementCount * elementSize,
+                0
+                );
+}
+
 void rtER_VK_drawFrame(void* vpImpl) {
         struct rtER_VulkanImpl* VkContext = (struct rtER_VulkanImpl*)vpImpl;
 
@@ -299,7 +340,7 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 &offset
         );
 
-        vkCmdDraw(VkContext->commandBuffer[VkContext->currentFrame], 3, 1, 0, 0);
+        vkCmdDraw(VkContext->commandBuffer[VkContext->currentFrame], 6, 1, 0, 0); // Remember - this  needs to know the # of vertices to draw
 
         vkCmdEndRenderPass(VkContext->commandBuffer[VkContext->currentFrame]);
 

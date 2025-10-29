@@ -4,6 +4,20 @@
 #include "rtERenderer/rtERenderer.h"
 #include <stdlib.h>
 
+
+struct vertex {
+        float x, y, z;
+};
+
+struct vertex vertices[6] = {
+        {-1.0, 1.0, 1.0},
+        {0.0, 0.0, 1.0},
+        {-1.0, -1.0, 1.0}, 
+        {1.0, 1.0, 1.0},
+        {1.0, -1.0, 1.0}, 
+        {0.0, 0.0, 1.0},
+};
+
 // TODO: See about getting tests set up
 int main() {
         rtELog_init("RTechLog");
@@ -25,11 +39,13 @@ int main() {
                 return EXIT_FAILURE;
         }
 
+
         rtEW_showWindow(window);  
 
         rtELog_log("Beginning main loop");
         while(!rtEW_windowShouldClose(window)) {
                 rtER_drawFrame(renderer);
+                rtER_bufferVertexData(renderer, vertices, sizeof(struct vertex), 6);
         }
 
         rtELog_log("Cleaning up resources");
