@@ -206,6 +206,9 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 {-0.5, -0.5, 1.0}, // I may be stupid... watch out for culling...
         };
 
+        // TODO: Now, I'm going to need a way to specify vertices through the rtER API
+        // TODO: Perhaps also a way to create/reallocate buffers via the api. I think the way the pipeline consumes vertex data is either going to be set in stone or configurable via api. Probably set in stone because it seems excessive to try otherwise
+
         rtER_VK_bufferData(
                 vertices,
                 (*dest)->logicalDevice,
