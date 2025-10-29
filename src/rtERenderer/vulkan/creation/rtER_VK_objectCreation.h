@@ -4,6 +4,8 @@
 
 struct vertex {
         float x, y, z;
+        float u, v;
+        float r, g, b;
 };
 
 struct rtER_VK_Buffer {

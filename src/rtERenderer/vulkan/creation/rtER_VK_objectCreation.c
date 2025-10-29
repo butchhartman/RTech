@@ -798,6 +798,9 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 }
         };
 
+        // Should I just specify that I expect vertex data in a specific format?
+        // For example, a vertex has interleaved position, uv, and color data? 
+
         VkVertexInputBindingDescription inputBinding = {
                 .binding = 0,
                 .stride = sizeof(struct vertex),
@@ -811,14 +814,33 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 .offset = 0
         };
 
+        VkVertexInputAttributeDescription inputAttribuv = {
+                .location = 1,
+                .binding = inputBinding.binding,
+                .format = VK_FORMAT_R32G32_SFLOAT,
+                .offset = sizeof(float) * 3 // offset by 3, because it is directly after the vertex coords
+        };
+
+        VkVertexInputAttributeDescription inputAttribrgb = {
+                .location = 2,
+                .binding = inputBinding.binding,
+                .format = VK_FORMAT_R32G32B32_SFLOAT,
+                .offset = sizeof(float) * 5 // offset by 5, because it is directly after the vertex coords & uv
+        };
+
+        VkVertexInputAttributeDescription attribdescs[] = {
+                inputAttrib, inputAttribuv, inputAttribrgb
+        };
+
+
         VkPipelineVertexInputStateCreateInfo vertexInputState = {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = 0,
                 .vertexBindingDescriptionCount = 1,
                 .pVertexBindingDescriptions = &inputBinding,
-                .vertexAttributeDescriptionCount = 1, // vertices are hardcoded, not needed
-                .pVertexAttributeDescriptions = &inputAttrib,
+                .vertexAttributeDescriptionCount = 3, // vertices are hardcoded, not needed
+                .pVertexAttributeDescriptions = attribdescs,
 
         };
 

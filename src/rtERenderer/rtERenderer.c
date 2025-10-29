@@ -40,6 +40,7 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** renderer, struct 
 }
 
 void rtER_bufferVertexData(struct rtERenderer* renderer, void* data, size_t elementSize, size_t elementCount) {
+        // TODO: Wait for buffer to not be in use before updating
         renderer->bufferVertexData(renderer->impl, data, elementSize, elementCount);
 }
 

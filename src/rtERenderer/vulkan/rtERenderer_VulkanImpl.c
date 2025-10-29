@@ -201,9 +201,9 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 );
 
         struct vertex vertices[3] = {
-                {0.0, 0.5, 1.0},
-                {0.5, -0.5, 1.0},
-                {-0.5, -0.5, 1.0}, // I may be stupid... watch out for culling...
+                {0.0, 0.5, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0},
+                {0.5, -0.5, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0},
+                {-0.5, -0.5, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0}, // I may be stupid... watch out for culling...
         };
 
         // TODO: Now, I'm going to need a way to specify vertices through the rtER API
