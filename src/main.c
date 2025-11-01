@@ -20,7 +20,7 @@ struct vertex vertices[6] = {
         {0.0, 0.0, 1.0, 0.0, 0.0, 0.4, 0.7, 0.3},
 };
 
-// TODO: See about getting tests set up
+// TODO: Model, view, proj matrices
 int main() {
         rtELog_init("RTechLog");
 
