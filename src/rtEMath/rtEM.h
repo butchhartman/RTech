@@ -36,6 +36,8 @@ union rtEM_mat4 {
 void rtEM_mat4Log(union rtEM_mat4 mat);
 void rtEM_mat4Print(union rtEM_mat4 mat);
 
+union rtEM_mat4 rtEM_mat4CreateTranslation(float x, float y, float z);
+
 union rtEM_mat4 rtEM_mat4MultiplyMat4(union rtEM_mat4 a, union rtEM_mat4 b);
 
 #endif // RTEMATH_H_

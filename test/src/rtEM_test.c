@@ -24,5 +24,15 @@ RTEST_SUITE_BEGIN("rtEMath Tests") {
                                         3.0, 4.0, 2.0, 6.0}};
                 rtEM_mat4Print(rtEM_mat4MultiplyMat4(mata, matb));
 
-                }
+        }
+        RTEST_CASE("Translation matrix creation works") {
+                union rtEM_mat4 mat = rtEM_mat4CreateTranslation(6, 3, 5);
+                RTEST_ASSERT(mat.a30 == 6.0);
+                RTEST_ASSERT(mat.a31 == 3.0);
+                RTEST_ASSERT(mat.a32 == 5.0);
+                RTEST_ASSERT(mat.a33 == 1.0);
+                rtEM_mat4Print(mat);
+        }
+
+
 }

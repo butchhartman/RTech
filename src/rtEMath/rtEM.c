@@ -19,6 +19,19 @@ void rtEM_mat4Print(union rtEM_mat4 mat) {
         mat.a03, mat.a13, mat.a23, mat.a33);
 }
 
+union rtEM_mat4 rtEM_mat4CreateTranslation(float x, float y, float z) {
+        union rtEM_mat4 mat = {
+                {
+                        1.0, 0.0, 0.0, 0.0,
+                        0.0, 1.0, 0.0, 1.0,
+                        0.0, 0.0, 1.0, 0.0,
+                        x, y, z, 1.0
+
+                }
+        };
+        return mat;
+}
+
 union rtEM_mat4 rtEM_mat4MultiplyMat4(union rtEM_mat4 a, union rtEM_mat4 b) {
         union rtEM_mat4 product;
         for (size_t row = 0; row < 4; row++) {
