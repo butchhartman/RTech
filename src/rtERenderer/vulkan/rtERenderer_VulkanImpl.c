@@ -346,7 +346,7 @@ void rtER_VK_drawFrame(void* vpImpl) {
                 &offset
         );
 
-        vkCmdDraw(VkContext->commandBuffer[VkContext->currentFrame], 6, 1, 0, 0); // Remember - this  needs to know the # of vertices to draw
+        vkCmdDraw(VkContext->commandBuffer[VkContext->currentFrame], VkContext->vertexBuffer.bufferSize / sizeof(struct vertex), 1, 0, 0); // Remember - this  needs to know the # of vertices to draw
 
         vkCmdEndRenderPass(VkContext->commandBuffer[VkContext->currentFrame]);
 
