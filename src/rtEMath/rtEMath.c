@@ -42,6 +42,10 @@ void rtEM_vectorSetAt(struct vector* vec, unsigned int index, double value) {
         }
 }
 
+double* rtEM_getDataPtr(const struct vector* vec) {
+        return vec->data;
+}
+
 void rtEM_cleanupVector(struct vector* vec) {
         free(vec->data);
         free(vec);
