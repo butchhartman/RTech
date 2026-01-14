@@ -1,13 +1,25 @@
 #ifndef RTEMATH_H_
 #define RTEMATH_H_
 
-struct vector;
+#define RTEMATH_VEC3_ZERO {0.0, 0.0, 0.0}
+#define RTEMATH_MAT4_IDENTITY {1.0, 0.0, 0.0, 0.0 \
+                               0.0, 1.0, 0.0, 0.0 \
+                               0.0, 0.0, 1.0, 0.0 \
+                               0.0, 0.0, 0.0, 1.0}
 
-struct vector* rtEM_createVector(unsigned int length);
-double rtEM_vectorGetAt(struct vector* vec, unsigned int index);
-void rtEM_vectorSetAt(struct vector* vec, unsigned int index, double value);
-double* rtEM_getDataPtr(const struct vector* vec);
-void rtEM_cleanupVector(struct vector* vec);
+typedef double vec3[3];
+typedef double mat4[16];
 
+void rtEMath_vec3MultScalar(vec3 a, double factor, vec3 dest);
+void rtEMath_vec3DivScalar(vec3 a, double divisor, vec3 dest);
+void rtEMath_vec3Add(vec3 a, vec3 b, vec3 dest);
+void rtEMath_vec3Sub(vec3 a, vec3 b, vec3 dest);
+void rtEMath_vec3Cross(vec3 a, vec3 b, vec3 dest);
+double rtEMath_vec3Dot(vec3 a, vec3 b);
+void rtEMath_vec3Normalize(vec3 a, vec3 dest);
+double rtEMath_vec3GetMagnitude(vec3 a);
+
+void rtEMath_mat4CreateModel(vec3 a, mat4 dest);
+void rtEMath_mat4CreateLookAt(vec3 position, vec3 target, vec3 up, mat4 dest);
 
 #endif //RTEMATH_H_
