@@ -2,9 +2,9 @@
 #define RTEMATH_H_
 
 #define RTEMATH_VEC3_ZERO {0.0, 0.0, 0.0}
-#define RTEMATH_MAT4_IDENTITY {1.0, 0.0, 0.0, 0.0 \
-                               0.0, 1.0, 0.0, 0.0 \
-                               0.0, 0.0, 1.0, 0.0 \
+#define RTEMATH_MAT4_IDENTITY {1.0, 0.0, 0.0, 0.0, \
+                               0.0, 1.0, 0.0, 0.0, \
+                               0.0, 0.0, 1.0, 0.0, \
                                0.0, 0.0, 0.0, 1.0}
 
 typedef double vec3[3];
