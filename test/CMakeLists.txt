@@ -33,5 +33,5 @@ addTestSuite(src/rtEW_test.c)
 addTestSuite(src/rtEMemoryManager_test.c)
 addTestSuite(src/rtEStackAllocator_test.c)
 addTestSuite(src/rtELog_test.c)
-addTestSuite(src/rtEM_test.c)
+addTestSuite(src/rtEMath_test.c)
 
