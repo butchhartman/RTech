@@ -7,6 +7,7 @@ layout (location = 2) in vec3 vertexColor;
 layout(location = 0) out vec3 vColor;
 
 void main() {
+        // the W is what defines what is clipped. -w <= x, y, z <= w
         gl_Position = vec4(vertexP, 1.0);
         vColor = vertexColor;
 }

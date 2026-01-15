@@ -2,6 +2,8 @@
 #include "rtEMath/rtEMath.h"
 #include "rTest/rTest.h"
 #include <stdio.h>
+#define _USE_MATH_DEFINES
+#include <math.h>
 
 
 RTEST_SUITE_BEGIN("rtEMath Suite") {
@@ -48,14 +50,21 @@ RTEST_SUITE_BEGIN("rtEMath Suite") {
                 vec3 point = {0.0, 0.0, 5.0};
 
                 rtEMath_mat4CreateModel(point, destMat);
-                printf("%f, %f, %f, %f\n %f, %f, %f, %f\n, %f, %f, %f, %f\n, %f, %f, %f, %f\n",
+                printf("%f, %f, %f, %f\n %f, %f, %f, %f\n, %f, %f, %f, %f\n, %f, %f, %f, %f\n\n",
                         destMat[0], destMat[4], destMat[8], destMat[12],
                         destMat[1], destMat[5], destMat[9], destMat[13],
                         destMat[2], destMat[6], destMat[10], destMat[14],
                         destMat[3], destMat[7], destMat[11], destMat[15]);
 
                 rtEMath_mat4CreateLookAt(zero, point, up, destMat);
-                printf("%f, %f, %f, %f\n %f, %f, %f, %f\n, %f, %f, %f, %f\n, %f, %f, %f, %f\n",
+                printf("%f, %f, %f, %f\n %f, %f, %f, %f\n, %f, %f, %f, %f\n, %f, %f, %f, %f\n\n",
+                        destMat[0], destMat[4], destMat[8], destMat[12],
+                        destMat[1], destMat[5], destMat[9], destMat[13],
+                        destMat[2], destMat[6], destMat[10], destMat[14],
+                        destMat[3], destMat[7], destMat[11], destMat[15]);
+
+                rtEMath_mat4CreatePerspectiveProjection(45.0*M_PI/360, 0.1, 100, 16.0/9.0, destMat);
+                printf("%f, %f, %f, %f\n %f, %f, %f, %f\n, %f, %f, %f, %f\n, %f, %f, %f, %f\n\n",
                         destMat[0], destMat[4], destMat[8], destMat[12],
                         destMat[1], destMat[5], destMat[9], destMat[13],
                         destMat[2], destMat[6], destMat[10], destMat[14],

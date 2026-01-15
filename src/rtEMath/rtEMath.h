@@ -21,5 +21,6 @@ double rtEMath_vec3GetMagnitude(vec3 a);
 
 void rtEMath_mat4CreateModel(vec3 a, mat4 dest);
 void rtEMath_mat4CreateLookAt(vec3 position, vec3 target, vec3 up, mat4 dest);
+void rtEMath_mat4CreatePerspectiveProjection(double fov, double near, double far, double aspect, mat4 dest);
 
 #endif //RTEMATH_H_

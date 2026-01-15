@@ -44,10 +44,10 @@ int main() {
 
         rtEW_showWindow(window);  
 
+        rtER_bufferVertexData(renderer, vertices, sizeof(struct vertex), 6);
         rtELog_log("Beginning main loop");
         while(!rtEW_windowShouldClose(window)) {
                 rtER_drawFrame(renderer);
-                rtER_bufferVertexData(renderer, vertices, sizeof(struct vertex), 6);
         }
 
         rtELog_log("Cleaning up resources");

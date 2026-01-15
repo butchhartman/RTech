@@ -79,5 +79,33 @@ void rtEMath_mat4CreateLookAt(vec3 position, vec3 target, vec3 up, mat4 dest) {
         memcpy(dest, tmpMat, sizeof(double) * 16);
 }
 
+void rtEMath_mat4CreatePerspectiveProjection(double fov, double near, double far, double aspect, mat4 dest) {
+        // big thanks to https://learnwebgl.brown37.net/08_projections/projections_perspective.html
+        double top = near * tan(fov/2);
+        double bottom = -top;
+        double right = top*aspect;
+        double left = -top;
+
+        double midX = (left + right)/2.0;
+        double midY = (bottom + top)/2.0;
+
+        double scaleX = 2.0 / (right - left);
+        double scaleY = 2.0 / (top - bottom);
+
+        
+        double c1 = (2*far*near) / (near - far);
+        double c2 = (far + near) / (far - near);
+
+        mat4 tmpMat = {
+                near*scaleX, 0          , 0 ,  0,
+                0          , near*scaleY, 0 ,  0,
+                0          , 0          ,-c1, -1,
+                midX       , midY       , c2,  0
+        };
+
+        memcpy(dest, tmpMat, sizeof(double) * 16);
+}
+
+
 
 
