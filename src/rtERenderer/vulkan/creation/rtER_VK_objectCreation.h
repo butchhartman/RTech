@@ -108,7 +108,8 @@ enum VkResult rtER_VK_createGraphicsPipeline(
         VkPipelineLayout* layoutDest,
         VkDevice logicalDevice,
         VkRenderPass renderpass,
-        struct rtER_VK_swapchainInfo swapchainInfo
+        struct rtER_VK_swapchainInfo swapchainInfo,
+        VkDescriptorSetLayout UBODescriptorSetLayout
         );
 
 enum VkResult rtER_VK_createCommandPool(
@@ -147,11 +148,32 @@ enum VkResult rtER_VK_createBuffer(
         );
 
 enum VkResult rtER_VK_bufferData(
-        struct vertex* data,
+        void* data,
         VkDevice logicalDevice,
         VkDeviceMemory deviceMemory,
         VkDeviceSize offset,
         VkDeviceSize sizeToMap,
         VkMemoryMapFlags flags
         );
+
+enum VkResult rtER_VK_createDescriptorSetLayout(
+                VkDescriptorSetLayout* dest, 
+                VkDevice logicalDevice,
+                uint32_t binding,
+                uint32_t descriptorCount,
+                enum VkDescriptorType descriptorType,
+                enum VkShaderStageFlagBits stageFlags,
+                const VkSampler* pImmutableSamplers);
+
+enum VkResult rtER_VK_createDescriptorPool(
+                VkDescriptorPool* dest, 
+                VkDevice logicalDevice
+                );
+
+enum VkResult rtER_VK_allocateDescriptorSets(
+                VkDescriptorSet* dest,
+                VkDescriptorSetLayout layout,
+                VkDescriptorPool descriptorPool,
+                VkDevice logicalDevice
+              );
 #endif // RTER_VK_OBJECTCREATION_H_

@@ -1,4 +1,5 @@
 #include "rtERenderer/vulkan/rtERenderer_VulkanImpl.h"
+#include "rtEMath/rtEMath.h"
 #include "rtERenderer/vulkan/creation/rtER_VK_infoCreation.h"
 #include "rtERenderer/vulkan/creation/rtER_VK_objectCreation.h"
 #include "rtERenderer/vulkan/debug/debugCallback.h"
@@ -8,7 +9,6 @@
 #include "rtERenderer/vulkan/rtERenderer_VK_constants.h"
 #include "rtEW/rtenginewindow.h"
 #include "rtEW/vulkan/rtEW_VK_createSurface.h"
-#include "rtEMath/rtEMath.h"
 #include <assert.h>
 #include <stdint.h>
 #include <vulkan/vulkan.h>
@@ -44,6 +44,10 @@ struct rtER_VulkanImpl {
         VkSemaphore renderingFinishedSemaphores[2]; // needs to be swapchain image count to have a semaphore fore each image. Hardcoded to 2 but could be less.
         size_t currentFrame;
         struct rtER_VK_Buffer vertexBuffer;
+        VkDescriptorSetLayout UBODescriptorSetLayout;
+        VkDescriptorPool UBODescriptorPool;
+        VkDescriptorSet UBODescriptorSet;
+        struct rtER_VK_Buffer UBO;
 };
 
  
@@ -139,12 +143,23 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 (*dest)->swapchainInfo
         );
 
+        rtER_VK_createDescriptorSetLayout(
+                        &(*dest)->UBODescriptorSetLayout,
+                        (*dest)->logicalDevice,
+                        0,
+                        1,
+                        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        VK_SHADER_STAGE_VERTEX_BIT,
+                        nullptr
+                        );
+
         rtER_VK_createGraphicsPipeline(
                 &(*dest)->graphicsPipeline,
                 &(*dest)->pipelineLayout,
                 (*dest)->logicalDevice,
                 (*dest)->renderPass,
-                (*dest)->swapchainInfo
+                (*dest)->swapchainInfo,
+                (*dest)->UBODescriptorSetLayout
         );
 
         rtER_VK_createCommandPool(
@@ -205,6 +220,7 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
                 );
 
+
         struct vertex vertices[3] = {
                 {0.0, 0.5, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0},
                 {0.5, -0.5, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0},
@@ -222,6 +238,49 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 sizeof(struct vertex) * 3,
                 0
         );
+
+        rtER_VK_createDescriptorPool(
+                        &(*dest)->UBODescriptorPool,
+                        (*dest)->logicalDevice
+                );
+
+        rtER_VK_allocateDescriptorSets(
+                        &(*dest)->UBODescriptorSet,
+                        (*dest)->UBODescriptorSetLayout,
+                        (*dest)->UBODescriptorPool,
+                        (*dest)->logicalDevice
+                );
+
+        rtER_VK_createBuffer(
+                &(*dest)->UBO,
+                192,
+                (*dest)->logicalDevice,
+                (*dest)->physDevice,
+                0,
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_SHARING_MODE_EXCLUSIVE,
+                0,
+                nullptr,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                );
+
+
+
+        mat4 uboData[3] = {
+                RTEMATH_MAT4_IDENTITY,
+                RTEMATH_MAT4_IDENTITY,
+                RTEMATH_MAT4_IDENTITY
+        };
+
+        rtER_VK_bufferData(
+                uboData,
+                (*dest)->logicalDevice,
+                (*dest)->UBO.bufferDeviceMemory,
+                0,
+                192,
+                0
+        );
+
 
         (*dest)->currentFrame = 0;
 
@@ -250,6 +309,18 @@ void rtER_VK_bufferVertexData(void* vkImpl, void* data, size_t elementSize, size
                         vkContext->vertexBuffer.bufferDeviceMemory,
                         nullptr);
 
+                rtER_VK_createBuffer(
+                        &vkContext->vertexBuffer,
+                        elementSize * elementCount,
+                        vkContext->logicalDevice,
+                        vkContext->physDevice,
+                        0,
+                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                        VK_SHARING_MODE_EXCLUSIVE,
+                        0,
+                        nullptr,
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                );
                 rtER_VK_createBuffer(
                         &vkContext->vertexBuffer,
                         elementSize * elementCount,
@@ -338,6 +409,40 @@ void rtER_VK_drawFrame(void* vpImpl) {
         };
 
         vkCmdBeginRenderPass(VkContext->commandBuffer[VkContext->currentFrame], &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
+        struct VkDescriptorBufferInfo bufferInfo = {
+                .buffer = VkContext->UBO.buffer,
+                .offset = 0,
+                .range = VK_WHOLE_SIZE
+        };
+
+        struct VkWriteDescriptorSet writeSet = {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
+                .dstSet = VkContext->UBODescriptorSet,
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pBufferInfo = &bufferInfo,
+
+        };
+
+        vkUpdateDescriptorSets(
+                        VkContext->logicalDevice,
+                        1,
+                        &writeSet,
+                        0,
+                        nullptr);
+
+        vkCmdBindDescriptorSets(
+                VkContext->commandBuffer[VkContext->currentFrame],
+                VK_PIPELINE_BIND_POINT_GRAPHICS,
+                VkContext->pipelineLayout,
+                0,
+                1,
+                &VkContext->UBODescriptorSet,
+                0,
+                nullptr);
 
         vkCmdBindPipeline(VkContext->commandBuffer[VkContext->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext->graphicsPipeline);
         

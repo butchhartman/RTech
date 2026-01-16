@@ -751,7 +751,8 @@ enum VkResult rtER_VK_createGraphicsPipeline(
         VkPipelineLayout* layoutDest,
         VkDevice logicalDevice,
         VkRenderPass renderpass,
-        struct rtER_VK_swapchainInfo swapchainInfo
+        struct rtER_VK_swapchainInfo swapchainInfo,
+        VkDescriptorSetLayout UBODescriptorSetLayout
         ) {
 
         uint32_t vertexShaderSize;
@@ -840,7 +841,7 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 .flags = 0,
                 .vertexBindingDescriptionCount = 1,
                 .pVertexBindingDescriptions = &inputBinding,
-                .vertexAttributeDescriptionCount = 3, // vertices are hardcoded, not needed
+                .vertexAttributeDescriptionCount = 3,
                 .pVertexAttributeDescriptions = attribdescs,
 
         };
@@ -944,20 +945,14 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 .pScissors = &scissor
         };
 
-        VkPushConstantRange pcRange = {
-                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-                .offset = 0,
-                .size = 192//sizeof(float) * 16 * 3
-        };
-
         VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = 0,
-                .setLayoutCount = 0,
-                .pSetLayouts = nullptr,
-                .pushConstantRangeCount = 1,
-                .pPushConstantRanges = &pcRange 
+                .setLayoutCount = 1,
+                .pSetLayouts = &UBODescriptorSetLayout,
+                .pushConstantRangeCount = 0,
+                .pPushConstantRanges = nullptr
         };
 
         vkCreatePipelineLayout(
@@ -1214,7 +1209,7 @@ enum VkResult rtER_VK_createBuffer(
 }
 
 enum VkResult rtER_VK_bufferData(
-        struct vertex* data,
+        void* data,
         VkDevice logicalDevice,
         VkDeviceMemory deviceMemory,
         VkDeviceSize offset,
@@ -1257,3 +1252,108 @@ enum VkResult rtER_VK_bufferData(
 
         return VK_SUCCESS;
 }
+
+enum VkResult rtER_VK_createDescriptorSetLayout(
+                VkDescriptorSetLayout* dest, 
+                VkDevice logicalDevice,
+                uint32_t binding,
+                uint32_t descriptorCount,
+                enum VkDescriptorType descriptorType,
+                enum VkShaderStageFlagBits stageFlags,
+                const VkSampler* pImmutableSamplers
+                ) {
+        struct VkDescriptorSetLayoutBinding layoutBinding = {
+                .binding = binding,
+                .descriptorType = descriptorType,
+                .descriptorCount = descriptorCount,
+                .stageFlags = stageFlags,
+                .pImmutableSamplers = pImmutableSamplers 
+        };
+
+        struct VkDescriptorSetLayoutCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = NO_VK_FLAGS,
+                .bindingCount = 1,
+                .pBindings = &layoutBinding
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkCreateDescriptorSetLayout(
+                        logicalDevice,
+                        &createInfo,
+                        nullptr,
+                        dest
+                ),
+                "Failed to create descriptor set layout"
+                );
+
+        return VK_SUCCESS;
+}
+
+enum VkResult rtER_VK_createDescriptorPool(
+                VkDescriptorPool* dest, 
+                VkDevice logicalDevice
+                ) {
+        struct VkDescriptorPoolSize dpsize= {
+                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = 192
+        };
+
+        struct VkDescriptorPoolCreateInfo createInfo = {
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = NO_VK_FLAGS,
+                .maxSets = 1,
+                .poolSizeCount = 1,
+                .pPoolSizes = &dpsize
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkCreateDescriptorPool(
+                        logicalDevice,
+                        &createInfo,
+                        nullptr,
+                        dest),
+                "Failed to create descriptor pool"
+                );
+
+        return VK_SUCCESS;
+}
+
+enum VkResult rtER_VK_allocateDescriptorSets(
+                VkDescriptorSet* dest,
+                VkDescriptorSetLayout layout,
+                VkDescriptorPool descriptorPool,
+                VkDevice logicalDevice
+              ) {
+
+        VkDescriptorSetAllocateInfo allocInfo = {
+                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+                .pNext = nullptr,
+                .descriptorPool = descriptorPool,
+                .descriptorSetCount = 1,
+                .pSetLayouts = &layout
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkAllocateDescriptorSets(
+                        logicalDevice,
+                        &allocInfo,
+                        dest),
+                "Failed to allocate descriptor sets"
+                );
+
+        return VK_SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
+
