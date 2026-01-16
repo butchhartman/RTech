@@ -8,6 +8,7 @@
 #include "rtERenderer/vulkan/rtERenderer_VK_constants.h"
 #include "rtEW/rtenginewindow.h"
 #include "rtEW/vulkan/rtEW_VK_createSurface.h"
+#include "rtEMath/rtEMath.h"
 #include <assert.h>
 #include <stdint.h>
 #include <vulkan/vulkan.h>
@@ -33,6 +34,8 @@ struct rtER_VulkanImpl {
         VkRenderPass renderPass;
         VkFramebuffer* framebuffers; // same length as image views, which is the same as swapchainimagecount
         VkPipeline graphicsPipeline;
+        VkPipelineLayout pipelineLayout;
+
         VkCommandPool commandPool;
         VkCommandBuffer commandBuffer[MAX_CONCURRENT_FRAMES];
         VkFence queueExecuteFence[MAX_CONCURRENT_FRAMES];
@@ -137,6 +140,7 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
 
         rtER_VK_createGraphicsPipeline(
                 &(*dest)->graphicsPipeline,
+                &(*dest)->pipelineLayout,
                 (*dest)->logicalDevice,
                 (*dest)->renderPass,
                 (*dest)->swapchainInfo
@@ -333,6 +337,16 @@ void rtER_VK_drawFrame(void* vpImpl) {
         };
 
         vkCmdBeginRenderPass(VkContext->commandBuffer[VkContext->currentFrame], &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
+        
+        mat4 pcdata[3] = {
+                RTEMATH_MAT4_IDENTITY,
+                RTEMATH_MAT4_IDENTITY,
+                RTEMATH_MAT4_IDENTITY,
+        };
+
+        vkCmdPushConstants(VkContext->commandBuffer[VkContext->currentFrame], VkContext->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, 192, pcdata);
+
+
 
         vkCmdBindPipeline(VkContext->commandBuffer[VkContext->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext->graphicsPipeline);
         

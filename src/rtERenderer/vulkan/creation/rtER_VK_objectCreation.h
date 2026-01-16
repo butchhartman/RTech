@@ -105,6 +105,7 @@ enum VkResult rtER_VK_createFramebuffers(
 
 enum VkResult rtER_VK_createGraphicsPipeline(
         VkPipeline* dest,
+        VkPipelineLayout* layoutDest,
         VkDevice logicalDevice,
         VkRenderPass renderpass,
         struct rtER_VK_swapchainInfo swapchainInfo

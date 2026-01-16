@@ -748,6 +748,7 @@ enum VkResult rtER_VK_createShaderModule(
 
 enum VkResult rtER_VK_createGraphicsPipeline(
         VkPipeline* dest,
+        VkPipelineLayout* layoutDest,
         VkDevice logicalDevice,
         VkRenderPass renderpass,
         struct rtER_VK_swapchainInfo swapchainInfo
@@ -943,23 +944,27 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 .pScissors = &scissor
         };
 
+        VkPushConstantRange pcRange = {
+                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+                .offset = 0,
+                .size = 192//sizeof(float) * 16 * 3
+        };
+
         VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = {
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = 0,
                 .setLayoutCount = 0,
                 .pSetLayouts = nullptr,
-                .pushConstantRangeCount = 0,
-                .pPushConstantRanges = nullptr
+                .pushConstantRangeCount = 1,
+                .pPushConstantRanges = &pcRange 
         };
-
-        VkPipelineLayout layout;
 
         vkCreatePipelineLayout(
                 logicalDevice,
                 &pipelineLayoutCreateInfo,
                 nullptr,
-                &layout
+                layoutDest
         );
 
         VkGraphicsPipelineCreateInfo createInfo = {
@@ -978,7 +983,7 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 .pColorBlendState = &colorBlendState,
                 // TODO: dynamic viewport and scissor
                 .pDynamicState = nullptr,
-                .layout = layout,
+                .layout = *layoutDest,
                 .renderPass = renderpass,
                 .subpass = 0,
                 .basePipelineHandle = VK_NULL_HANDLE,
