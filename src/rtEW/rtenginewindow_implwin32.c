@@ -385,7 +385,7 @@ enum VkResult rtEW_VK_createSurface(
                 "Failed to create win32 window surface"
                 );
 
-        rtELog_debug_logInfo("Created win32 surface");
+        rtELog_debug_logInfo("Created win32 VK surface");
         return VK_SUCCESS;
 }
 #undef VK_USE_PLATFORM_WIN32_KHR

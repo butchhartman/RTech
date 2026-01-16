@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <vulkan/vulkan.h>
+#include <string.h>
 #include <stdlib.h>
 
 
@@ -337,16 +338,6 @@ void rtER_VK_drawFrame(void* vpImpl) {
         };
 
         vkCmdBeginRenderPass(VkContext->commandBuffer[VkContext->currentFrame], &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
-        
-        mat4 pcdata[3] = {
-                RTEMATH_MAT4_IDENTITY,
-                RTEMATH_MAT4_IDENTITY,
-                RTEMATH_MAT4_IDENTITY,
-        };
-
-        vkCmdPushConstants(VkContext->commandBuffer[VkContext->currentFrame], VkContext->pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, 192, pcdata);
-
-
 
         vkCmdBindPipeline(VkContext->commandBuffer[VkContext->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext->graphicsPipeline);
         
