@@ -15,6 +15,6 @@ layout(location = 0) out vec3 vColor;
 
 void main() {
         // the W is what defines what is clipped. -w <= x, y, z <= w
-        gl_Position = model * camera * proj * vec4(vertexP, 1.0);
+        gl_Position = proj * camera * model * vec4(vertexP, 1.0);
         vColor = vertexColor;
 }

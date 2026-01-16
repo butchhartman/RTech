@@ -70,10 +70,10 @@ void rtEMath_mat4CreateLookAt(vec3 position, vec3 target, vec3 up, mat4 dest) {
         rtEMath_vec3Normalize(finalUp, finalUp);
 
         mat4 tmpMat = {
-                rightVector[0], finalUp[0], invDirection[0], -position[0],
-                rightVector[1], finalUp[1], invDirection[1], -position[1],
-                rightVector[2], finalUp[2], invDirection[2], -position[2],
-                0.0, 0.0, 0.0, 1.0
+                rightVector[0], finalUp[0], invDirection[0], 0,
+                rightVector[1], finalUp[1], invDirection[1], 0,
+                rightVector[2], finalUp[2], invDirection[2], 0,
+                -position[0], -position[1], -position[2], 1.0
         };
 
         memcpy(dest, tmpMat, sizeof(float) * 16);
@@ -84,8 +84,8 @@ void rtEMath_mat4CreatePerspectiveProjection(float fov, float near, float far, f
         float top = near * tan(fov/2);
         float bottom = -top;
         float right = top*aspect;
-        float left = -top;
-
+        float left = -right;
+/*
         float midX = (left + right)/2.0;
         float midY = (bottom + top)/2.0;
 
@@ -96,11 +96,12 @@ void rtEMath_mat4CreatePerspectiveProjection(float fov, float near, float far, f
         float c1 = (2*far*near) / (near - far);
         float c2 = (far + near) / (far - near);
 
+        */
         mat4 tmpMat = {
-                near*scaleX, 0          , 0 ,  0,
-                0          , near*scaleY, 0 ,  0,
-                0          , 0          ,-c1, -1,
-                midX       , midY       , c2,  0
+                2*near/(right-left), 0          , 0 ,  0,
+                0          , 2*near/(top-bottom), 0 ,  0,
+                0          , 0          ,-(far+near)/(far-near), -1,
+                -near*(right+left)/(right-left), -near*(top+bottom)/(top-bottom), 2*far*near/(near-far),  0
         };
 
         memcpy(dest, tmpMat, sizeof(float) * 16);

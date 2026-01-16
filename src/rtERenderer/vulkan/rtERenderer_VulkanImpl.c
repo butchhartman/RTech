@@ -265,12 +265,28 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 );
 
 
+        vec3 modelPos = {0.0, 0.0, -1.0};
+        mat4 model;
+        rtEMath_mat4CreateModel(modelPos, model);
+
+        vec3 cameraPos = {1.0, 0.0, 0.0};
+        vec3 cameraTargetPos = {0.0, 0.0, -1.0};
+        vec3 up = {0.0, 1.0, 0.0};
+        mat4 camera;
+        rtEMath_mat4CreateLookAt(cameraPos, cameraTargetPos, up, camera);
+
+        mat4 proj;
+        rtEMath_mat4CreatePerspectiveProjection(1.5707, .01, 100, 16.0/9.0, proj);
+
 
         mat4 uboData[3] = {
                 RTEMATH_MAT4_IDENTITY,
                 RTEMATH_MAT4_IDENTITY,
                 RTEMATH_MAT4_IDENTITY
         };
+        memcpy(uboData, model, 64);
+        memcpy(uboData+1, camera, 64);
+        memcpy(uboData+2, proj, 64);
 
         rtER_VK_bufferData(
                 uboData,
@@ -280,6 +296,31 @@ enum rtEErrorCode rtER_VK_initializeRenderer(struct rtER_VulkanImpl** dest, stru
                 192,
                 0
         );
+
+        struct VkDescriptorBufferInfo bufferInfo = {
+                .buffer = (*dest)->UBO.buffer,
+                .offset = 0,
+                .range = VK_WHOLE_SIZE
+        };
+
+        struct VkWriteDescriptorSet writeSet = {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
+                .dstSet = (*dest)->UBODescriptorSet,
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pBufferInfo = &bufferInfo,
+
+        };
+
+        vkUpdateDescriptorSets(
+                        (*dest)->logicalDevice,
+                        1,
+                        &writeSet,
+                        0,
+                        nullptr);
 
 
         (*dest)->currentFrame = 0;
@@ -409,30 +450,6 @@ void rtER_VK_drawFrame(void* vpImpl) {
         };
 
         vkCmdBeginRenderPass(VkContext->commandBuffer[VkContext->currentFrame], &renderPassBegin, VK_SUBPASS_CONTENTS_INLINE);
-        struct VkDescriptorBufferInfo bufferInfo = {
-                .buffer = VkContext->UBO.buffer,
-                .offset = 0,
-                .range = VK_WHOLE_SIZE
-        };
-
-        struct VkWriteDescriptorSet writeSet = {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .pNext = nullptr,
-                .dstSet = VkContext->UBODescriptorSet,
-                .dstBinding = 0,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .pBufferInfo = &bufferInfo,
-
-        };
-
-        vkUpdateDescriptorSets(
-                        VkContext->logicalDevice,
-                        1,
-                        &writeSet,
-                        0,
-                        nullptr);
 
         vkCmdBindDescriptorSets(
                 VkContext->commandBuffer[VkContext->currentFrame],
