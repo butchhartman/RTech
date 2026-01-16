@@ -13,7 +13,8 @@
         };
 
         const char* rtER_VK_requiredDeviceExtensions[] = {
-                "VK_KHR_swapchain"
+                "VK_KHR_swapchain",
+                "VK_KHR_maintenance1"
         };
 
 #endif // RTERENDERER_VK_CONSTANTS_H_
