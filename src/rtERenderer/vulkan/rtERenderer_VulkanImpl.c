@@ -387,6 +387,51 @@ void rtER_VK_bufferVertexData(void* vkImpl, void* data, size_t elementSize, size
                 );
 }
 
+void rtER_VK_bufferUniformData(void* vkImpl, size_t size, mat4 model, mat4 camera, mat4 proj) {
+       struct rtER_VulkanImpl* vkContext = vkImpl; 
+
+        mat4 uboData[3];
+
+        memcpy(uboData, model, 64);
+        memcpy(uboData+1, camera, 64);
+        memcpy(uboData+2, proj, 64);
+
+        rtER_VK_bufferData(
+                uboData,
+                vkContext->logicalDevice,
+                vkContext->UBO.bufferDeviceMemory,
+                0,
+                size,
+                0
+        );
+
+        struct VkDescriptorBufferInfo bufferInfo = {
+                .buffer = vkContext->UBO.buffer,
+                .offset = 0,
+                .range = VK_WHOLE_SIZE
+        };
+
+        struct VkWriteDescriptorSet writeSet = {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .pNext = nullptr,
+                .dstSet = vkContext->UBODescriptorSet,
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pBufferInfo = &bufferInfo,
+
+        };
+
+        vkUpdateDescriptorSets(
+                        vkContext->logicalDevice,
+                        1,
+                        &writeSet,
+                        0,
+                        nullptr);
+
+}
+
 void rtER_VK_drawFrame(void* vpImpl) {
         struct rtER_VulkanImpl* VkContext = (struct rtER_VulkanImpl*)vpImpl;
 
@@ -464,7 +509,6 @@ void rtER_VK_drawFrame(void* vpImpl) {
         vkCmdBindPipeline(VkContext->commandBuffer[VkContext->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, VkContext->graphicsPipeline);
         
         VkDeviceSize offset = 0;
-        // TODO: Add mechanism for writing to this vertex buffer and update shaders to read from it
         vkCmdBindVertexBuffers(
                 VkContext->commandBuffer[VkContext->currentFrame],
                 0,
