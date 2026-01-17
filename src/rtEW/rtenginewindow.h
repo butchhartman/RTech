@@ -2,12 +2,37 @@
 #define RTENGINEWINDOW_H_
 #include "rtEMemoryManager/rtEAllocatorProcs.h"
 #include <rtEErrorCodes/rtEErrorCodes.h>
+#include <stdint.h>
 
 /**
 * @file 
 * 
 */
+enum rtEW_inputType {
+        RTEW_INPUT_TYPE_KEYBOARD,
+        RTEW_INPUT_TYPE_MOUSE
+};
 
+enum rtEW_keycode {
+        RTEW_KEYCODE_W,
+        RTEW_KEYCODE_A,
+        RTEW_KEYCODE_S,
+        RTEW_KEYCODE_D,
+};
+
+enum rtEW_keyState {
+        RTEW_KEY_UP,
+        RTEW_KEY_DOWN
+};
+
+struct inputEvent {
+        enum rtEW_inputType inputType;
+        
+        enum rtEW_keycode keycode;
+        enum rtEW_keyState keystate;
+};
+
+typedef void (*inputCallback)(struct inputEvent event);
 
 /**
 * An opaque handle representing a window
@@ -90,5 +115,7 @@ bool rtEW_windowShouldClose(const struct rtEngineWindow* window);
 * @param window - The window to close
 */
 void rtEW_setWindowShouldClose(struct rtEngineWindow* window);
+
+void rtEW_setInputCallback(struct rtEngineWindow* window, inputCallback inputCB);
 
 #endif //RTENGINEWINDOW_H_ 

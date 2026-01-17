@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <Windows.h>
+#include <winuser.h>
 #include "rtEW/rtenginewindow.h"
 #include "rtEMemoryManager/structs/rtEAllocatorProcs.h"
 
@@ -26,6 +27,8 @@ enum rtEErrorCode rtEW_setAllocator(struct rtEAllocatorProcs alloc) {
         return rtEErrorCode_SUCCESS;
 }
 
+
+
 struct rtEngineWindow{
         char* windowTitle;
         size_t windowTitleLength;
@@ -36,6 +39,8 @@ struct rtEngineWindow{
         HWND windowHandle;
         HANDLE msgLoopThread;
         HANDLE shouldCloseMutex;
+
+        inputCallback inputCB;
 };
 
 struct windowAndSemaphore{
@@ -213,6 +218,8 @@ static enum rtEErrorCode createWindowWindowHandle(struct rtEngineWindow* window)
                 NULL
         );
 
+        SetWindowLongPtr(window->windowHandle, GWLP_USERDATA, (LONG_PTR)window);
+
         if (err == rtEErrorCode_SUCCESS) {
                 RTEW_GLOBAL_alloc.rtEA_free((void**)(&unicodeWindowName), RTEW_GLOBAL_alloc.usr);
         }
@@ -362,6 +369,10 @@ void rtEW_setWindowShouldClose(struct rtEngineWindow* window) {
  //       ReleaseMutex(window->shouldCloseMutex);
 }
 
+void rtEW_setInputCallback(struct rtEngineWindow* window, inputCallback inputCB) {
+        window->inputCB = inputCB;
+}
+
 #define VK_USE_PLATFORM_WIN32_KHR
 #include "rtEW/vulkan/rtEW_VK_createSurface.h"
 #include "rtERenderer/vulkan/macros/rtERendererVKMacros.h"
@@ -390,19 +401,51 @@ enum VkResult rtEW_VK_createSurface(
 }
 #undef VK_USE_PLATFORM_WIN32_KHR
 
+static void sendKeydownEvent(struct rtEngineWindow* thiswindow, WPARAM wParam) {
+        struct inputEvent event = {
+                .inputType = RTEW_INPUT_TYPE_KEYBOARD,
+                .keystate = RTEW_KEY_DOWN
+        };
+
+        switch (wParam) {
+                case 'W':
+                        event.keycode = RTEW_KEYCODE_W;
+                        break;
+                case 'A':
+                        event.keycode = RTEW_KEYCODE_A;
+                        break;
+                case 'S':
+                        event.keycode = RTEW_KEYCODE_S;
+                        break;
+                case 'D':
+                        event.keycode = RTEW_KEYCODE_D;
+                        break;
+        }
+        
+        thiswindow->inputCB(event);
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+        struct rtEngineWindow* thiswindow = (struct rtEngineWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+
         switch (uMsg) {
                 // The microsoft approved way to handle window exiting
                 case WM_CLOSE:
-                        if (MessageBox(hwnd, L"Are you sure you want to quit?", L"Confirm", MB_YESNO) == IDYES) {
+                        //if (MessageBox(hwnd, L"Are you sure you want to quit?", L"Confirm", MB_YESNO) == IDYES) {
                                 if (DestroyWindow(hwnd) == 0) {
                                         rtELog_debug_logError("HWND destruction failed somehow?");
                                 }
-                        }
-                        return 0;
+                        //}
+                        break;
                 case WM_DESTROY:
                         PostQuitMessage(0);
-                        return 0;
+                        break;
+
+                case WM_KEYDOWN:
+                        sendKeydownEvent(thiswindow, wParam);
+                default:
+                        return DefWindowProc(hwnd, uMsg, wParam, lParam);
         }
-        return DefWindowProc(hwnd, uMsg, wParam, lParam);
+
+        return 0;
 }

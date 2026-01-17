@@ -1,5 +1,6 @@
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtELog/rtELog.h" 
+#include "rtEMath/rtEMath.h"
 #include "rtEW/rtenginewindow.h"
 #include "rtERenderer/rtERenderer.h"
 #include <math.h>
@@ -21,6 +22,35 @@ struct vertex vertices[6] = {
         {1.0, -1.0, 0.0, 0.0, 0.0, 0.3, 0.5, 0.3}, 
         {0.0, 0.0, 0.0, 0.0, 0.0, 0.4, 0.7, 0.3},
 };
+vec3 modelPos = {0.0, 0.0, -1.0};
+mat4 model;
+
+vec3 cameraPos = {0, 0, 0};
+vec3 cameraTargetPos = {0.0, 0.0, -1.0};
+vec3 up = {0.0, 1.0, 0.0};
+mat4 camera;
+mat4 proj;
+
+
+static void handleInput(struct inputEvent event) {
+        if (event.keycode == RTEW_KEYCODE_W) {
+                rtELog_debug_logInfo("PRESSED W!");
+                vec3 add = {0.0, 0.0, -1.0};
+                rtEMath_vec3Add(cameraPos, add, cameraPos);
+        } else if (event.keycode == RTEW_KEYCODE_A) {
+                rtELog_debug_logInfo("PRESSED A!");
+                vec3 add = {-1.0, 0.0, 0.0};
+                rtEMath_vec3Add(cameraPos, add, cameraPos);
+        } else if (event.keycode == RTEW_KEYCODE_S) {
+                rtELog_debug_logInfo("PRESSED S!");
+                vec3 add = {0.0, 0.0, 1.0};
+                rtEMath_vec3Add(cameraPos, add, cameraPos);
+        } else if (event.keycode == RTEW_KEYCODE_D) {
+                rtELog_debug_logInfo("PRESSED D!");
+                vec3 add = {1.0, 0.0, 0.0};
+                rtEMath_vec3Add(cameraPos, add, cameraPos);
+        }
+}
 
 int main() {
         rtELog_init("RTechLog");
@@ -48,22 +78,21 @@ int main() {
         rtER_bufferVertexData(renderer, vertices, sizeof(struct vertex), 6);
         rtELog_log("Beginning main loop");
 
-        clock_t start = clock();
+        rtEW_setInputCallback(window, handleInput);
+
+       // clock_t start = clock();
 
         while(!rtEW_windowShouldClose(window)) {
-                double elapsedTime = (clock() - start) / (double)CLOCKS_PER_SEC;
+                //double elapsedTime = (clock() - start) / (double)CLOCKS_PER_SEC;
 
-                vec3 modelPos = {0.0, 0.0, -1.0};
-                mat4 model;
+
                 rtEMath_mat4CreateModel(modelPos, model);
 
-                vec3 cameraPos = {sin(elapsedTime), tan(elapsedTime), cos(elapsedTime) + 1};
-                vec3 cameraTargetPos = {0.0, 0.0, -1.0};
-                vec3 up = {0.0, 1.0, 0.0};
-                mat4 camera;
+                vec3 look = {0.0, 0.0, -1.0};
+                rtEMath_vec3Add(cameraPos, look, cameraTargetPos);
+
                 rtEMath_mat4CreateLookAt(cameraPos, cameraTargetPos, up, camera);
 
-                mat4 proj;
                 rtEMath_mat4CreatePerspectiveProjection(1.5707, .01, 100, 16.0/9.0, proj);
 
                 rtER_bufferUniformData(renderer, 192, model, camera, proj);
