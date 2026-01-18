@@ -33,22 +33,31 @@ mat4 proj;
 
 
 static void handleInput(struct inputEvent event) {
-        if (event.keycode == RTEW_KEYCODE_W) {
-                rtELog_debug_logInfo("PRESSED W!");
-                vec3 add = {0.0, 0.0, -1.0};
-                rtEMath_vec3Add(cameraPos, add, cameraPos);
-        } else if (event.keycode == RTEW_KEYCODE_A) {
-                rtELog_debug_logInfo("PRESSED A!");
-                vec3 add = {-1.0, 0.0, 0.0};
-                rtEMath_vec3Add(cameraPos, add, cameraPos);
-        } else if (event.keycode == RTEW_KEYCODE_S) {
-                rtELog_debug_logInfo("PRESSED S!");
-                vec3 add = {0.0, 0.0, 1.0};
-                rtEMath_vec3Add(cameraPos, add, cameraPos);
-        } else if (event.keycode == RTEW_KEYCODE_D) {
-                rtELog_debug_logInfo("PRESSED D!");
-                vec3 add = {1.0, 0.0, 0.0};
-                rtEMath_vec3Add(cameraPos, add, cameraPos);
+        switch (event.inputType) {
+                case (RTEW_INPUT_TYPE_KEYBOARD):
+                        if (event.keycode == RTEW_KEYCODE_W) {
+                                rtELog_debug_logInfo("PRESSED W!");
+                                vec3 add = {0.0, 0.0, -1.0};
+                                rtEMath_vec3Add(cameraPos, add, cameraPos);
+                        } else if (event.keycode == RTEW_KEYCODE_A) {
+                                rtELog_debug_logInfo("PRESSED A!");
+                                vec3 add = {-1.0, 0.0, 0.0};
+                                rtEMath_vec3Add(cameraPos, add, cameraPos);
+                        } else if (event.keycode == RTEW_KEYCODE_S) {
+                                rtELog_debug_logInfo("PRESSED S!");
+                                vec3 add = {0.0, 0.0, 1.0};
+                                rtEMath_vec3Add(cameraPos, add, cameraPos);
+                        } else if (event.keycode == RTEW_KEYCODE_D) {
+                                rtELog_debug_logInfo("PRESSED D!");
+                                vec3 add = {1.0, 0.0, 0.0};
+                                rtEMath_vec3Add(cameraPos, add, cameraPos);
+                }
+
+                case (RTEW_INPUT_TYPE_MOUSE):
+                        rtELog_debug_logInfo("MOUSE POSITION (%f, %f)", event.mouseXPos, event.mouseYPos);
+                        break;
+                default:
+                        return;
         }
 }
 

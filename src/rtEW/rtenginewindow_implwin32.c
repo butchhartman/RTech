@@ -9,7 +9,10 @@
 #include <string.h>
 #include <stdio.h>
 #include <Windows.h>
+#include <wingdi.h>
 #include <winuser.h>
+#include <windef.h>
+#include <WindowsX.h>
 #include "rtEW/rtenginewindow.h"
 #include "rtEMemoryManager/structs/rtEAllocatorProcs.h"
 
@@ -33,12 +36,16 @@ struct rtEngineWindow{
         char* windowTitle;
         size_t windowTitleLength;
 
+        int windowWidth;
+        int windowHeight;
+
         bool shouldClose;
 
         // win32
         HWND windowHandle;
         HANDLE msgLoopThread;
         HANDLE shouldCloseMutex;
+        HDC DC;
 
         inputCallback inputCB;
 };
@@ -52,6 +59,17 @@ struct windowAndSemaphore{
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore);
+
+static void updateWindowSize(struct rtEngineWindow* window) {
+        RECT clientRect;
+
+        GetClientRect(window->windowHandle, &clientRect);
+
+        window->windowWidth = clientRect.right;
+        window->windowHeight = clientRect.bottom;
+        rtELog_debug_logInfo("WINDOW HEIGHT: %d\n WINDOW WIDTH: %d\n", clientRect.bottom, clientRect.right);
+
+}
 
 static enum rtEErrorCode registerWindowClass() {
         // should only ever be called once
@@ -217,7 +235,8 @@ static enum rtEErrorCode createWindowWindowHandle(struct rtEngineWindow* window)
                 GetModuleHandle(NULL),
                 NULL
         );
-
+        
+        window->DC = GetDC(window->windowHandle);
         SetWindowLongPtr(window->windowHandle, GWLP_USERDATA, (LONG_PTR)window);
 
         if (err == rtEErrorCode_SUCCESS) {
@@ -228,6 +247,10 @@ static enum rtEErrorCode createWindowWindowHandle(struct rtEngineWindow* window)
                 rtELog_logError("Failed to create window handle");
                 return rtEErrorCode_MEMORY_ALLOC_FAILURE;
         }
+
+        // gets window size
+        
+        updateWindowSize(window);
 
         return rtEErrorCode_SUCCESS;
 }
@@ -320,10 +343,12 @@ DWORD rtEW_workerThread_runWin32Processes(void* windowAndSemaphore) {
 
 void rtEW_showWindow(struct rtEngineWindow* window) {
         ShowWindow(window->windowHandle, SW_SHOWNORMAL);
+        updateWindowSize(window);
 }
 
 void rtEW_hideWindow(struct rtEngineWindow* window) {
        ShowWindow(window->windowHandle, SW_HIDE); 
+        updateWindowSize(window);
 }
 
 enum rtEErrorCode rtEW_cleanupWindow(struct rtEngineWindow** window) {
@@ -425,6 +450,16 @@ static void sendKeydownEvent(struct rtEngineWindow* thiswindow, WPARAM wParam) {
         thiswindow->inputCB(event);
 }
 
+static void sendMouseEvent(struct rtEngineWindow* thisWindow, LPARAM lParam) {
+        struct inputEvent event = {
+                .inputType = RTEW_INPUT_TYPE_MOUSE,
+                .mouseXPos = GET_X_LPARAM(lParam) / (float)thisWindow->windowWidth,
+                .mouseYPos = GET_Y_LPARAM(lParam) / (float)thisWindow->windowHeight
+        };
+
+        thisWindow->inputCB(event);
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         struct rtEngineWindow* thiswindow = (struct rtEngineWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
@@ -443,6 +478,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
                 case WM_KEYDOWN:
                         sendKeydownEvent(thiswindow, wParam);
+                        break;
+
+                case WM_MOUSEMOVE:
+                        sendMouseEvent(thiswindow, lParam);
+                        break;
+
                 default:
                         return DefWindowProc(hwnd, uMsg, wParam, lParam);
         }

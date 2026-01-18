@@ -30,6 +30,9 @@ struct inputEvent {
         
         enum rtEW_keycode keycode;
         enum rtEW_keyState keystate;
+
+        float mouseXPos;
+        float mouseYPos;
 };
 
 typedef void (*inputCallback)(struct inputEvent event);
