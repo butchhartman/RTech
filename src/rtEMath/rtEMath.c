@@ -73,7 +73,7 @@ void rtEMath_mat4CreateLookAt(vec3 position, vec3 target, vec3 up, mat4 dest) {
                 rightVector[0], finalUp[0], invDirection[0], 0,
                 rightVector[1], finalUp[1], invDirection[1], 0,
                 rightVector[2], finalUp[2], invDirection[2], 0,
-                -position[0], -position[1], -position[2], 1.0
+                -(rtEMath_vec3Dot(rightVector, position)), -(rtEMath_vec3Dot(finalUp, position)), -(rtEMath_vec3Dot(invDirection, position)), 1.0
         };
 
         memcpy(dest, tmpMat, sizeof(float) * 16);

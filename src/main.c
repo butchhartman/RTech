@@ -3,6 +3,8 @@
 #include "rtEMath/rtEMath.h"
 #include "rtEW/rtenginewindow.h"
 #include "rtERenderer/rtERenderer.h"
+#include <string.h>
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
@@ -27,34 +29,70 @@ mat4 model;
 
 vec3 cameraPos = {0, 0, 0};
 vec3 cameraTargetPos = {0.0, 0.0, -1.0};
+vec3 cameraLookDirection;
 vec3 up = {0.0, 1.0, 0.0};
 mat4 camera;
 mat4 proj;
 
+float pitch = 0;
+float yaw = -90;
+float mouseLastX = 0;
+float mouseLastY = 0;
+
+bool forward = false;
+bool backward = false;
+bool right = false;
+bool left = false;
+
+static inline float toRadians(float deg) {
+        return (2 * M_PI * deg)/360.0;
+}
 
 static void handleInput(struct inputEvent event) {
         switch (event.inputType) {
                 case (RTEW_INPUT_TYPE_KEYBOARD):
-                        if (event.keycode == RTEW_KEYCODE_W) {
-                                rtELog_debug_logInfo("PRESSED W!");
-                                vec3 add = {0.0, 0.0, -1.0};
-                                rtEMath_vec3Add(cameraPos, add, cameraPos);
-                        } else if (event.keycode == RTEW_KEYCODE_A) {
-                                rtELog_debug_logInfo("PRESSED A!");
-                                vec3 add = {-1.0, 0.0, 0.0};
-                                rtEMath_vec3Add(cameraPos, add, cameraPos);
-                        } else if (event.keycode == RTEW_KEYCODE_S) {
-                                rtELog_debug_logInfo("PRESSED S!");
-                                vec3 add = {0.0, 0.0, 1.0};
-                                rtEMath_vec3Add(cameraPos, add, cameraPos);
-                        } else if (event.keycode == RTEW_KEYCODE_D) {
-                                rtELog_debug_logInfo("PRESSED D!");
-                                vec3 add = {1.0, 0.0, 0.0};
-                                rtEMath_vec3Add(cameraPos, add, cameraPos);
-                }
+                        if (event.keycode == RTEW_KEYCODE_W && event.keystate == RTEW_KEY_DOWN ) {
+                                forward = true;
+                        } else if (event.keycode == RTEW_KEYCODE_A && event.keystate == RTEW_KEY_DOWN ) {
+                                left = true;
+                        } else if (event.keycode == RTEW_KEYCODE_S && event.keystate == RTEW_KEY_DOWN ) {
+                                backward = true;
+                        } else if (event.keycode == RTEW_KEYCODE_D && event.keystate == RTEW_KEY_DOWN ) {
+                                right = true;
+                        }
+
+                        if (event.keycode == RTEW_KEYCODE_W && event.keystate == RTEW_KEY_UP) {
+                                forward = false;
+                        } else if (event.keycode == RTEW_KEYCODE_A && event.keystate == RTEW_KEY_UP) {
+                                left = false;
+                        } else if (event.keycode == RTEW_KEYCODE_S && event.keystate == RTEW_KEY_UP) {
+                                backward = false;
+                        } else if (event.keycode == RTEW_KEYCODE_D && event.keystate == RTEW_KEY_UP) {
+                                right = false;
+                        }
+
+
+                        break;
 
                 case (RTEW_INPUT_TYPE_MOUSE):
-                        rtELog_debug_logInfo("MOUSE POSITION (%f, %f)", event.mouseXPos, event.mouseYPos);
+                        // the offset is calculated in the window proc... not sure how happy I am about that. Consider changing to raw input api
+                        float xOffset = event.mouseXPos ;//- mouseLastX;
+                        float yOffset = /**mouseLastY - */event.mouseYPos; // since y is down we do this
+
+                        yaw += xOffset * 0.25;
+                        pitch += yOffset * 0.25;
+
+                        mouseLastX = event.mouseXPos;
+                        mouseLastY = event.mouseYPos;
+
+                        vec3 tmpcameraLookDirection = {
+                                cos(toRadians(yaw)) * cos(toRadians(pitch)), 
+                                sin(toRadians(pitch)),
+                                sin(toRadians(yaw)) * cos(toRadians(pitch))
+                        };
+
+                        rtEMath_vec3Normalize(tmpcameraLookDirection, cameraLookDirection);
+
                         break;
                 default:
                         return;
@@ -84,21 +122,52 @@ int main() {
 
         rtEW_showWindow(window);  
 
+        rtEW_enableLockMouse(window);
+
         rtER_bufferVertexData(renderer, vertices, sizeof(struct vertex), 6);
         rtELog_log("Beginning main loop");
 
         rtEW_setInputCallback(window, handleInput);
 
-       // clock_t start = clock();
-
+        clock_t start = clock();
+        double elapsedTime;
         while(!rtEW_windowShouldClose(window)) {
-                //double elapsedTime = (clock() - start) / (double)CLOCKS_PER_SEC;
+                elapsedTime = ((clock() - start) / (double)CLOCKS_PER_SEC);
+                start = clock();
+
+                if (forward) {
+                        vec3 move;
+                        memcpy(move, cameraLookDirection, sizeof(float) * 3); 
+                        rtEMath_vec3MultScalar(move, elapsedTime, move);
+                        rtEMath_vec3Add(cameraPos, move, cameraPos);
+                }
+
+                if (backward) {
+                        vec3 move;
+                        memcpy(move, cameraLookDirection, sizeof(float) * 3); 
+                        rtEMath_vec3MultScalar(move, -elapsedTime, move);
+                        rtEMath_vec3Add(cameraPos, move, cameraPos);
+                }
+
+                if (right) {
+                        vec3 move;
+                        rtEMath_vec3Cross(up, cameraLookDirection, move);
+                        rtEMath_vec3MultScalar(move, -elapsedTime, move);
+                        rtEMath_vec3Add(cameraPos, move, cameraPos);
+                }
+                if (left) {
+                        vec3 move;
+                        rtEMath_vec3Cross(up, cameraLookDirection, move);
+                        rtEMath_vec3MultScalar(move, elapsedTime, move);
+                        rtEMath_vec3Add(cameraPos, move, cameraPos);
+                }
 
 
                 rtEMath_mat4CreateModel(modelPos, model);
 
-                vec3 look = {0.0, 0.0, -1.0};
-                rtEMath_vec3Add(cameraPos, look, cameraTargetPos);
+                //vec3 look = {0.0, 0.0, -1.0};
+                //rtEMath_vec3Add(cameraPos, look, cameraTargetPos);
+                rtEMath_vec3Add(cameraPos, cameraLookDirection, cameraTargetPos);
 
                 rtEMath_mat4CreateLookAt(cameraPos, cameraTargetPos, up, camera);
 
@@ -107,6 +176,7 @@ int main() {
                 rtER_bufferUniformData(renderer, 192, model, camera, proj);
 
                 rtER_drawFrame(renderer);
+
         }
 
         rtELog_log("Cleaning up resources");

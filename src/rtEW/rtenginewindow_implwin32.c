@@ -40,6 +40,8 @@ struct rtEngineWindow{
         int windowHeight;
 
         bool shouldClose;
+        bool mouseLock;
+        bool mouseReset;
 
         // win32
         HWND windowHandle;
@@ -112,6 +114,7 @@ static enum rtEErrorCode initializeWindowMemory(struct rtEngineWindow** window, 
 
         (*window)->windowTitleLength = titleLen;
         (*window)->shouldClose = false;
+        (*window)->mouseReset = false;
 
         memcpy((*window)->windowTitle, windowTitle, titleLen);
 
@@ -450,11 +453,39 @@ static void sendKeydownEvent(struct rtEngineWindow* thiswindow, WPARAM wParam) {
         thiswindow->inputCB(event);
 }
 
-static void sendMouseEvent(struct rtEngineWindow* thisWindow, LPARAM lParam) {
+static void sendKeyupEvent(struct rtEngineWindow* thiswindow, WPARAM wParam) {
+        struct inputEvent event = {
+                .inputType = RTEW_INPUT_TYPE_KEYBOARD,
+                .keystate = RTEW_KEY_UP
+        };
+
+        switch (wParam) {
+                case 'W':
+                        event.keycode = RTEW_KEYCODE_W;
+                        break;
+                case 'A':
+                        event.keycode = RTEW_KEYCODE_A;
+                        break;
+                case 'S':
+                        event.keycode = RTEW_KEYCODE_S;
+                        break;
+                case 'D':
+                        event.keycode = RTEW_KEYCODE_D;
+                        break;
+        }
+        
+        thiswindow->inputCB(event);
+}
+
+void rtEW_enableLockMouse(struct rtEngineWindow* window) {
+        window->mouseLock = true;
+}
+
+static void sendMouseEvent(struct rtEngineWindow* thisWindow, float dx, float dy ) {
         struct inputEvent event = {
                 .inputType = RTEW_INPUT_TYPE_MOUSE,
-                .mouseXPos = GET_X_LPARAM(lParam) / (float)thisWindow->windowWidth,
-                .mouseYPos = GET_Y_LPARAM(lParam) / (float)thisWindow->windowHeight
+                .mouseXPos = dx,//GET_X_LPARAM(lParam) / (float)thisWindow->windowWidth,
+                .mouseYPos = dy,//(lParam) / (float)thisWindow->windowHeight
         };
 
         thisWindow->inputCB(event);
@@ -480,13 +511,36 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
                         sendKeydownEvent(thiswindow, wParam);
                         break;
 
+                case WM_KEYUP:
+                        sendKeyupEvent(thiswindow, wParam);
+                        break;
+
                 case WM_MOUSEMOVE:
-                        sendMouseEvent(thiswindow, lParam);
+
+                        RECT windowClientRect;
+                        GetClientRect(hwnd, &windowClientRect);
+                        POINT mousePos;
+                        mousePos.x = windowClientRect.right/2;
+                        mousePos.y = windowClientRect.bottom/2;
+                        sendMouseEvent(thiswindow, GET_X_LPARAM(lParam) - mousePos.x, -GET_Y_LPARAM(lParam) + mousePos.y);
+                        ClientToScreen(hwnd, &mousePos);
+                        SetCursorPos(
+                            mousePos.x,
+                            mousePos.y
+                        );
+
+                        /**
+                        RECT windowRect;
+                        GetWindowRect(thiswindow->windowHandle, &windowRect);
+                        int xPos = windowRect.left + (windowRect.right - windowRect.left )/2;
+                        int yPos = windowRect.top + (windowRect.bottom - windowRect.top)/2;
+                        SetCursorPos(xPos, yPos);
+                        */
                         break;
 
                 default:
-                        return DefWindowProc(hwnd, uMsg, wParam, lParam);
+                        break;
         }
 
-        return 0;
+        return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
