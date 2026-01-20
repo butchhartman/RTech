@@ -40,8 +40,6 @@ struct rtEngineWindow{
         int windowHeight;
 
         bool shouldClose;
-        bool mouseLock;
-        bool mouseReset;
 
         // win32
         HWND windowHandle;
@@ -114,7 +112,6 @@ static enum rtEErrorCode initializeWindowMemory(struct rtEngineWindow** window, 
 
         (*window)->windowTitleLength = titleLen;
         (*window)->shouldClose = false;
-        (*window)->mouseReset = false;
 
         memcpy((*window)->windowTitle, windowTitle, titleLen);
 
@@ -278,7 +275,7 @@ enum rtEErrorCode rtEW_init() {
 }
 
 enum rtEErrorCode rtEW_cleanup() {
-        int err =UnregisterClass(RTEW_WINDOW_CLASS_NAME, NULL);
+        int err = UnregisterClass(RTEW_WINDOW_CLASS_NAME, NULL);
         return (err != 0) ? rtEErrorCode_SUCCESS : rtEErrorCode_MEMORY_ALLOC_FAILURE;
 }
 
@@ -475,10 +472,6 @@ static void sendKeyupEvent(struct rtEngineWindow* thiswindow, WPARAM wParam) {
         }
         
         thiswindow->inputCB(event);
-}
-
-void rtEW_enableLockMouse(struct rtEngineWindow* window) {
-        window->mouseLock = true;
 }
 
 static void sendMouseEvent(struct rtEngineWindow* thisWindow, float dx, float dy ) {

@@ -121,6 +121,4 @@ void rtEW_setWindowShouldClose(struct rtEngineWindow* window);
 
 void rtEW_setInputCallback(struct rtEngineWindow* window, inputCallback inputCB);
 
-void rtEW_enableLockMouse(struct rtEngineWindow* window);
-
 #endif //RTENGINEWINDOW_H_ 

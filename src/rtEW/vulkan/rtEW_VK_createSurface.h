@@ -9,5 +9,4 @@ enum VkResult rtEW_VK_createSurface(
         const struct rtEngineWindow* window
         );
 
-
 #endif // RTEW_VK_CREATESURFACE_H_
