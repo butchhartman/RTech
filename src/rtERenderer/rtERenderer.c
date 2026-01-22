@@ -14,41 +14,9 @@
 #include <vulkan/vulkan.h>
 #include <string.h>
 #include <stdlib.h>
+#include "rtERenderer/rtER_VK_struct_definitions.h"
 
 
-constexpr size_t MAX_CONCURRENT_FRAMES = 2;
-
-struct rtERenderer { 
-        struct rtEngineWindow* window;
-        uint32_t apiVersion; 
-        VkInstance instance;
-        VkDebugUtilsMessengerEXT debugMessenger;
-        VkSurfaceKHR surface;
-        VkPhysicalDevice physDevice;
-        VkDevice logicalDevice;
-        struct rtER_VK_queueInfo queueInfo;
-        VkSwapchainKHR swapchain;
-        struct rtER_VK_swapchainInfo swapchainInfo;
-        VkImage* swapchainImages;
-        uint32_t swapchainImageCount;
-        VkImageView* swapchainImageViews;
-        VkRenderPass renderPass;
-        VkFramebuffer* framebuffers; // same length as image views, which is the same as swapchainimagecount
-        VkPipeline graphicsPipeline;
-        VkPipelineLayout pipelineLayout;
-
-        VkCommandPool commandPool;
-        VkCommandBuffer commandBuffer[MAX_CONCURRENT_FRAMES];
-        VkFence queueExecuteFence[MAX_CONCURRENT_FRAMES];
-        VkSemaphore imageAvaiableSemaphore[MAX_CONCURRENT_FRAMES];
-        VkSemaphore renderingFinishedSemaphores[2]; // needs to be swapchain image count to have a semaphore fore each image. Hardcoded to 2 but could be less.
-        size_t currentFrame;
-        struct rtER_VK_Buffer vertexBuffer;
-        VkDescriptorSetLayout UBODescriptorSetLayout;
-        VkDescriptorPool UBODescriptorPool;
-        VkDescriptorSet UBODescriptorSet;
-        struct rtER_VK_Buffer UBO;
-};
 
  
 enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, struct rtEngineWindow* window) {

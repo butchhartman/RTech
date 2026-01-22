@@ -10,6 +10,7 @@
 #include "rtERenderer/support/checkInstanceExtensionSupport.h"
 #include "rtERenderer/creation/rtER_VK_objectCreation.h"
 #include "rtERenderer/macros/rtERendererVKMacros.h"
+#include "rtERenderer/rtER_VK_struct_definitions.h"
 
 // I'm going to use the 1.0 version of Vulkan here so I can understand how everything fits together (also bonues compatibility but i dont think that is really a concern). Once that is done, I will upgrade to future versions as I see fit.
 

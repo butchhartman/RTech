@@ -1,35 +1,10 @@
 #ifndef RTER_VK_OBJECTCREATION_H_
 #define RTER_VK_OBJECTCREATION_H_
 #include <vulkan/vulkan.h>
-
-struct vertex {
-        float x, y, z;
-        float u, v;
-        float r, g, b;
-};
-
-struct rtER_VK_Buffer {
-        VkBuffer buffer;
-        VkDeviceMemory bufferDeviceMemory;
-        size_t bufferSize;
-};
-
-struct rtER_VK_swapchainInfo {
-        VkFormat imageFormat;
-        VkExtent2D swapchianExtent;
-};
-
-struct rtER_VK_queueCapabilities {
-        enum VkQueueFlagBits queueFlags;
-        VkBool32 presentationSupport;
-};
-
-struct rtER_VK_queueInfo {
-        VkQueue* queues;
-        uint32_t* queueFamilyIndices;
-        struct rtER_VK_queueCapabilities* queueFlags;
-        uint32_t queueCount;
-};
+struct rtER_VK_queueInfo;
+struct rtER_VK_queueCapabilities;
+struct rtER_VK_swapchainInfo;
+struct rtER_VK_Buffer;
 
 VkQueue* rtER_VK_getQueueWithCapabilities(
         struct rtER_VK_queueInfo queueInfo, 
