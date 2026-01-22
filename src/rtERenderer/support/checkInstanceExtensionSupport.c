@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "rtELog/rtELog.h"
-#include "rtERenderer/vulkan/support/checkInstanceExtensionSupport.h"
+#include "rtERenderer/support/checkInstanceExtensionSupport.h"
 
 VkBool32 rtER_VK_checkInstanceExtensionSupport(const char** requiredInstanceExtensions, uint32_t numRequiredInstanceExtensions) {
         uint32_t numSupportedInstanceExtensions;

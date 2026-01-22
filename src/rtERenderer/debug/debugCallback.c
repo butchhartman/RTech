@@ -1,5 +1,5 @@
 #include "rtELog/rtELog.h"
-#include "rtERenderer/vulkan/debug/debugCallback.h"
+#include "rtERenderer/debug/debugCallback.h"
 
 VkBool32 VKAPI_PTR rtER_debug_debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

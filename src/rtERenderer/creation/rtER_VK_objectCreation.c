@@ -3,13 +3,13 @@
 #include <stdint.h>
 #include <string.h>
 #include "rtELog/rtELog.h"
-#include "rtERenderer/vulkan/creation/rtER_VK_infoCreation.h"
-#include "rtERenderer/vulkan/creation/rtER_VK_readShaderSource.h"
-#include "rtERenderer/vulkan/debug/checkValidationLayerSupport.h"
-#include "rtERenderer/vulkan/debug/debugCallback.h"
-#include "rtERenderer/vulkan/support/checkInstanceExtensionSupport.h"
-#include "rtERenderer/vulkan/creation/rtER_VK_objectCreation.h"
-#include "rtERenderer/vulkan/macros/rtERendererVKMacros.h"
+#include "rtERenderer/creation/rtER_VK_infoCreation.h"
+#include "rtERenderer/creation/rtER_VK_readShaderSource.h"
+#include "rtERenderer/debug/checkValidationLayerSupport.h"
+#include "rtERenderer/debug/debugCallback.h"
+#include "rtERenderer/support/checkInstanceExtensionSupport.h"
+#include "rtERenderer/creation/rtER_VK_objectCreation.h"
+#include "rtERenderer/macros/rtERendererVKMacros.h"
 
 // I'm going to use the 1.0 version of Vulkan here so I can understand how everything fits together (also bonues compatibility but i dont think that is really a concern). Once that is done, I will upgrade to future versions as I see fit.
 
@@ -1346,7 +1346,6 @@ enum VkResult rtER_VK_allocateDescriptorSets(
 
         return VK_SUCCESS;
 }
-
 
 
 

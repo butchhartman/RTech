@@ -398,34 +398,6 @@ void rtEW_setInputCallback(struct rtEngineWindow* window, inputCallback inputCB)
         window->inputCB = inputCB;
 }
 
-#define VK_USE_PLATFORM_WIN32_KHR
-#include "rtEW/vulkan/rtEW_VK_createSurface.h"
-#include "rtERenderer/vulkan/macros/rtERendererVKMacros.h"
-
-enum VkResult rtEW_VK_createSurface(
-        VkSurfaceKHR* dest,
-        VkInstance instance,
-        const struct rtEngineWindow* window
-        ) {
-
-        VkWin32SurfaceCreateInfoKHR info = {
-                .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-                .pNext = nullptr,
-                .flags = 0,
-                .hinstance = GetModuleHandle(nullptr),
-                .hwnd = window->windowHandle,
-        };
-
-        VK_ERROR_LOG_AND_RETURN(
-                vkCreateWin32SurfaceKHR(instance, &info, nullptr, dest),
-                "Failed to create win32 window surface"
-                );
-
-        rtELog_debug_logInfo("Created win32 VK surface");
-        return VK_SUCCESS;
-}
-#undef VK_USE_PLATFORM_WIN32_KHR
-
 static void sendKeydownEvent(struct rtEngineWindow* thiswindow, WPARAM wParam) {
         struct inputEvent event = {
                 .inputType = RTEW_INPUT_TYPE_KEYBOARD,
@@ -537,3 +509,31 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
         return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
+
+#define VK_USE_PLATFORM_WIN32_KHR
+#include "rtEW/vulkan/rtEW_VK_createSurface.h"
+#include "rtERenderer/macros/rtERendererVKMacros.h"
+
+enum VkResult rtEW_VK_createSurface(
+        VkSurfaceKHR* dest,
+        VkInstance instance,
+        const struct rtEngineWindow* window
+        ) {
+
+        VkWin32SurfaceCreateInfoKHR info = {
+                .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+                .pNext = nullptr,
+                .flags = 0,
+                .hinstance = GetModuleHandle(nullptr),
+                .hwnd = window->windowHandle,
+        };
+
+        VK_ERROR_LOG_AND_RETURN(
+                vkCreateWin32SurfaceKHR(instance, &info, nullptr, dest),
+                "Failed to create win32 window surface"
+                );
+
+        rtELog_debug_logInfo("Created win32 VK surface");
+        return VK_SUCCESS;
+}
+#undef VK_USE_PLATFORM_WIN32_KHR

@@ -1,6 +1,6 @@
 #include "rtELog/rtELog.h"
-#include "rtERenderer/vulkan/debug/checkValidationLayerSupport.h"
-#include "rtERenderer/vulkan/macros/rtERendererVKMacros.h"
+#include "rtERenderer/debug/checkValidationLayerSupport.h"
+#include "rtERenderer/macros/rtERendererVKMacros.h"
 #include <stdlib.h>
 #include <string.h>
 

@@ -114,7 +114,7 @@ int main() {
         }
 
         struct rtERenderer* renderer;
-        if (rtER_initializeRenderer(&renderer, window, RENDERER_IMPL_ID_VULKAN) != rtEErrorCode_SUCCESS) {
+        if (rtER_initializeRenderer(&renderer, window) != rtEErrorCode_SUCCESS) {
                 rtELog_logError("Failed to initialize renderer");
                 return EXIT_FAILURE;
         }
@@ -128,9 +128,9 @@ int main() {
         rtEW_setInputCallback(window, handleInput);
 
         clock_t start = clock();
-        double elapsedTime;
+
         while(!rtEW_windowShouldClose(window)) {
-                elapsedTime = ((clock() - start) / (double)CLOCKS_PER_SEC);
+                double elapsedTime = ((clock() - start) / (double)CLOCKS_PER_SEC);
                 start = clock();
 
                 if (forward) {
