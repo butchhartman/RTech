@@ -62,6 +62,8 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
 
         renderer->window = window;
 
+        // TODO: Remove needing to put every relevant member in individually and just send through the whole renderer struct
+
         rtER_VK_createVKInstance(
                 &renderer->instance, 
                 &renderer->apiVersion, 
