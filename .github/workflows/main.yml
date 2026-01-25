@@ -16,6 +16,7 @@ jobs:
           uses: actions/checkout@v6.0.2
 
         - name: configure repo
+          working-directory: ${{github.workspace}}/scripts
           run: py ${{github.workspace}}/scripts/clang_withtests.py
           
         - name: build repo
