@@ -3,11 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "rtELog/rtELog.h"
-#include "rtERenderer/creation/rtER_VK_infoCreation.h"
-#include "rtERenderer/creation/rtER_VK_readShaderSource.h"
-#include "rtERenderer/debug/checkValidationLayerSupport.h"
-#include "rtERenderer/debug/debugCallback.h"
-#include "rtERenderer/support/checkInstanceExtensionSupport.h"
+#include "rtERenderer/support/rtER_VK_support.h"
 #include "rtERenderer/creation/rtER_VK_objectCreation.h"
 #include "rtERenderer/macros/rtERendererVKMacros.h"
 #include "rtERenderer/rtER_VK_struct_definitions.h"
@@ -77,12 +73,16 @@ enum VkResult rtER_VK_createVKInstance(
                 .apiVersion         = VK_API_VERSION_1_0//VK_API_VERSION_1_4
         };
 
-        struct VkDebugUtilsMessengerCreateInfoEXT dbmsgCreateInfo = 
-                rtER_VK_getDebugMessengerCreateInfo(
-                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT, 
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT, 
-                        rtER_debug_debugCallback
-                        );
+        struct VkDebugUtilsMessengerCreateInfoEXT dbmsgCreateInfo = {
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+                .pNext = nullptr,
+                .flags = NO_VK_FLAGS,
+                .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+                .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+                .pfnUserCallback = rtER_debug_debugCallback,
+                .pUserData = nullptr
+
+        };
 
         struct VkInstanceCreateInfo createInfo = {
                 .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -110,8 +110,8 @@ enum VkResult rtER_VK_createVKInstance(
 }
 
 enum VkResult rtER_VK_createDebugMessenger(
-        struct rtERenderer* renderer,
-        VkDebugUtilsMessengerCreateInfoEXT info) {
+        struct rtERenderer* renderer
+        ) {
 
         PFN_vkCreateDebugUtilsMessengerEXT pfnCreateDebugUtilsMessengerEXT = 
         (PFN_vkCreateDebugUtilsMessengerEXT)
@@ -119,10 +119,21 @@ enum VkResult rtER_VK_createDebugMessenger(
                 renderer->instance, 
                 "vkCreateDebugUtilsMessengerEXT");
 
+        struct VkDebugUtilsMessengerCreateInfoEXT dbmsgCreateInfo = {
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+                .pNext = nullptr,
+                .flags = NO_VK_FLAGS,
+                .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+                .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+                .pfnUserCallback = rtER_debug_debugCallback,
+                .pUserData = nullptr
+
+        };
+
         VK_ERROR_LOG_AND_RETURN(
                 pfnCreateDebugUtilsMessengerEXT(
                         renderer->instance, 
-                        &info, 
+                        &dbmsgCreateInfo, 
                         nullptr, 
                         &renderer->debugMessenger), 
                 "Failed to create debug messenger");

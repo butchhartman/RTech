@@ -1,8 +1,6 @@
 #include "rtERenderer/rtERenderer.h"
 #include "rtEMath/rtEMath.h"
-#include "rtERenderer/creation/rtER_VK_infoCreation.h"
 #include "rtERenderer/creation/rtER_VK_objectCreation.h"
-#include "rtERenderer/debug/debugCallback.h"
 #include "rtERenderer/macros/rtERendererVKMacros.h"
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtELog/rtELog.h"
@@ -41,18 +39,7 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                 );
 
         rtER_VK_createDebugMessenger(
-                renderer,
-                rtER_VK_getDebugMessengerCreateInfo(
-                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-
-                        rtER_debug_debugCallback
-                        )
+                renderer
                 );
 
         // this is a rtEW function, it makes sense to not give the windowing library access to the renderer definition.
