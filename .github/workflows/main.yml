@@ -1,6 +1,6 @@
 name: test
 run-name: ${{ github.actor }}
-on: [workflow_dispatch]
+on: [pull_request]
 jobs:
   test-compilation:
     runs-on: windows-latest
