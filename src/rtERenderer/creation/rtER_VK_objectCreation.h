@@ -21,8 +21,8 @@ enum VkResult rtER_VK_createVKInstance(
         uint32_t numRequiredLayers);
 
 enum VkResult rtER_VK_createDebugMessenger(
-        struct rtERenderer* renderer,
-        VkDebugUtilsMessengerCreateInfoEXT info);
+        struct rtERenderer* renderer
+        );
 
 
 enum VkResult rtER_VK_getSuitablePhysicalDevice(

@@ -3,11 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "rtELog/rtELog.h"
-#include "rtERenderer/creation/rtER_VK_infoCreation.h"
-#include "rtERenderer/creation/rtER_VK_readShaderSource.h"
-#include "rtERenderer/debug/checkValidationLayerSupport.h"
-#include "rtERenderer/debug/debugCallback.h"
-#include "rtERenderer/support/checkInstanceExtensionSupport.h"
+#include "rtERenderer/support/rtER_VK_support.h"
 #include "rtERenderer/creation/rtER_VK_objectCreation.h"
 #include "rtERenderer/macros/rtERendererVKMacros.h"
 #include "rtERenderer/rtER_VK_struct_definitions.h"
@@ -37,14 +33,12 @@ VkQueue* rtER_VK_getQueueWithCapabilities(
 }
 
 enum VkResult rtER_VK_createVKInstance(
-        VkInstance* dest, 
-        uint32_t* apiVersionDest, 
+        struct rtERenderer* renderer,
         const char** requiredInstanceExtensions, 
         uint32_t numRequiredInstanceExtensions, 
         const char** requiredLayers, 
         uint32_t numRequiredLayers) {
 
-        assert(dest != nullptr);
         #ifndef NDEBUG
         if (!rtER_debug_checkValidationLayerSupport(requiredLayers, numRequiredLayers)) {
                 rtELog_logError("One or more required validation layers not supported");
@@ -58,32 +52,37 @@ enum VkResult rtER_VK_createVKInstance(
         }
 
         VK_ERROR_LOG_AND_RETURN(
-                vkEnumerateInstanceVersion(apiVersionDest), 
+                vkEnumerateInstanceVersion(&renderer->apiVersion), 
                 "Failed to enumerate instance version. This should not happen."
                 );
 
-        if (VK_API_VERSION_MINOR(*apiVersionDest) < 4) {
+        /* This is not needed because there is no vk version below 1.0
+        if (VK_API_VERSION_MINOR(&renderer->apiVersion) < 0) {
                 rtELog_logError("Required Vulkan version 1.4 not supported");
                 return VK_ERROR_INCOMPATIBLE_DRIVER;
         }
+        */
 
-        // I dont think this needs a separate function. Maybe to make this code cleaner but this will always be the same value
         struct VkApplicationInfo applicationInfo = {
-                .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-                .pNext = nullptr,
-                .pApplicationName = RTECH_APPLICATION_NAME,
+                .sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+                .pNext              = nullptr,
+                .pApplicationName   = RTECH_APPLICATION_NAME,
                 .applicationVersion = VK_MAKE_API_VERSION(0, RTECH_VERSION_MAJOR, RTECH_VERSION_MINOR, RTECH_VERSION_PATCH),
-                .pEngineName = nullptr,
-                .engineVersion = 0,
-                .apiVersion = VK_API_VERSION_1_0//VK_API_VERSION_1_4
+                .pEngineName        = nullptr,
+                .engineVersion      = 0,
+                .apiVersion         = VK_API_VERSION_1_0//VK_API_VERSION_1_4
         };
 
-        struct VkDebugUtilsMessengerCreateInfoEXT dbmsgCreateInfo = 
-                rtER_VK_getDebugMessengerCreateInfo(
-                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT, 
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT, 
-                        rtER_debug_debugCallback
-                        );
+        struct VkDebugUtilsMessengerCreateInfoEXT dbmsgCreateInfo = {
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+                .pNext = nullptr,
+                .flags = NO_VK_FLAGS,
+                .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+                .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+                .pfnUserCallback = rtER_debug_debugCallback,
+                .pUserData = nullptr
+
+        };
 
         struct VkInstanceCreateInfo createInfo = {
                 .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
@@ -102,7 +101,7 @@ enum VkResult rtER_VK_createVKInstance(
         };
 
         VK_ERROR_LOG_AND_RETURN(
-                vkCreateInstance(&createInfo, nullptr, dest), 
+                vkCreateInstance(&createInfo, nullptr, &renderer->instance), 
                 "Failed to create Vulkan instance"
                 );
         
@@ -111,22 +110,32 @@ enum VkResult rtER_VK_createVKInstance(
 }
 
 enum VkResult rtER_VK_createDebugMessenger(
-        VkDebugUtilsMessengerEXT* dest, 
-        VkInstance instance, 
-        VkDebugUtilsMessengerCreateInfoEXT info) {
+        struct rtERenderer* renderer
+        ) {
 
         PFN_vkCreateDebugUtilsMessengerEXT pfnCreateDebugUtilsMessengerEXT = 
         (PFN_vkCreateDebugUtilsMessengerEXT)
         vkGetInstanceProcAddr(
-                instance, 
+                renderer->instance, 
                 "vkCreateDebugUtilsMessengerEXT");
+
+        struct VkDebugUtilsMessengerCreateInfoEXT dbmsgCreateInfo = {
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+                .pNext = nullptr,
+                .flags = NO_VK_FLAGS,
+                .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+                .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+                .pfnUserCallback = rtER_debug_debugCallback,
+                .pUserData = nullptr
+
+        };
 
         VK_ERROR_LOG_AND_RETURN(
                 pfnCreateDebugUtilsMessengerEXT(
-                        instance, 
-                        &info, 
+                        renderer->instance, 
+                        &dbmsgCreateInfo, 
                         nullptr, 
-                        dest), 
+                        &renderer->debugMessenger), 
                 "Failed to create debug messenger");
 
         rtELog_debug_logInfo("Created debug messenger");
@@ -140,10 +149,6 @@ static VkQueueFamilyProperties* getQueueFamilyProperties(VkPhysicalDevice physDe
         vkGetPhysicalDeviceQueueFamilyProperties(physDevice, count, nullptr);
 
         VkQueueFamilyProperties* queueFamilyProperties = malloc(sizeof(VkQueueFamilyProperties) * *count);
-//        for (size_t i = 0; i < *count; i++) {
- //               queueFamilyProperties[i]. = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2;
-   //             queueFamilyProperties[i].pNext = nullptr;
-  //      }
 
         vkGetPhysicalDeviceQueueFamilyProperties(physDevice, count, queueFamilyProperties);
 
@@ -156,6 +161,7 @@ static bool physicalDeviceHasQueueFamilies(
         VkQueueFlagBits* neededQueueFlags
         ) {
 
+        // base case
         if (*neededQueueFlags == 0) {
                 return true;
         }
@@ -167,6 +173,7 @@ static bool physicalDeviceHasQueueFamilies(
 
         for (size_t i = 0; i < numQueueFamilies; i++) {
                 if (queueFamilyProperties[i].queueFlags & *neededQueueFlags) {
+                        // Removes the supported flag(s) from neededqueueflags
                         (*neededQueueFlags) = (*neededQueueFlags) & ~(queueFamilyProperties[i].queueFlags & *neededQueueFlags);
                         free(queueFamilyProperties);
                         rtELog_debug_logInfo("Found queue family, iterating %d", (*neededQueueFlags));
@@ -264,23 +271,27 @@ static bool checkPhysicalDeviceSuitability(
 }
 
 enum VkResult rtER_VK_getSuitablePhysicalDevice(
-        VkPhysicalDevice* dest,
-        VkInstance instance,
-        VkSurfaceKHR surface,
+        struct rtERenderer* renderer,
         VkQueueFlagBits requiredQueueFlags,
         const char** requiredExtensions,
         uint32_t requiredExtensionsCount
         ) {
         uint32_t numPhysDevices;
-        vkEnumeratePhysicalDevices(instance, &numPhysDevices, nullptr);
+        vkEnumeratePhysicalDevices(renderer->instance, &numPhysDevices, nullptr);
 
         VkPhysicalDevice* physicalDevices = malloc(sizeof(VkPhysicalDevice) * numPhysDevices);
 
-        vkEnumeratePhysicalDevices(instance, &numPhysDevices, physicalDevices);
+        vkEnumeratePhysicalDevices(renderer->instance, &numPhysDevices, physicalDevices);
 
+        // Just selects the first one it finds; most users only have 1
         for (size_t i = 0; i < numPhysDevices; i++) {
-                if (checkPhysicalDeviceSuitability(physicalDevices[i], surface, requiredQueueFlags, requiredExtensions, requiredExtensionsCount)) {
-                        *dest = physicalDevices[i];
+                if (checkPhysicalDeviceSuitability(physicalDevices[i], 
+                                        renderer->surface, 
+                                        requiredQueueFlags, 
+                                        requiredExtensions, 
+                                        requiredExtensionsCount)
+                                ) {
+                        renderer->physDevice = physicalDevices[i];
                         rtELog_debug_logInfo("Found a suitable physical device");
                         free(physicalDevices);
                         return VK_SUCCESS;
@@ -365,6 +376,7 @@ static bool populatertERQueueInfo(
         return false;
 }
 
+// Note: priority is dynamically allocated and the caller is responsible for freeing it.
 static bool getDeviceQueueCreateInfosFromrtERQueueInfo(
         VkDeviceQueueCreateInfo** dest,
         uint32_t* queueCreateInfoCount,
@@ -406,11 +418,10 @@ static bool populationrtERQueueInfoQueueHandles(
         return true;
 }
 
+// this is dumb. presentation is always wanted.
 // SOLUTION: If the surface pointer is nullptr, then it is implied presentation is not wanted. if it is a valid pointer, then it is implied surface support is wanted
 enum VkResult rtER_VK_createLogicalDevice(
-        VkDevice* dest,
-        VkPhysicalDevice physDevice,
-        VkSurfaceKHR* surface,
+        struct rtERenderer* renderer,
         VkQueueFlagBits requiredQueueTypeFlags,
         const char** requiredExtensions,
         uint32_t requiredExtensionsCount,
@@ -418,13 +429,13 @@ enum VkResult rtER_VK_createLogicalDevice(
         ) {
         struct rtER_VK_queueCapabilities requiredQueueCapabilities = {
                 .queueFlags = requiredQueueTypeFlags,
-                .presentationSupport = !(surface == nullptr)
+                .presentationSupport = true
         };
         if (!populatertERQueueInfo(
                 queueInfo,
                 requiredQueueCapabilities,
-                physDevice,
-                *surface
+                renderer->physDevice,
+                renderer->surface
                 )) {
                 rtELog_logError("Required queues not supported");
                 return VK_ERROR_INCOMPATIBLE_DRIVER;
@@ -451,11 +462,14 @@ enum VkResult rtER_VK_createLogicalDevice(
                 .pEnabledFeatures = nullptr
         };
 
-        VK_ERROR_LOG_AND_RETURN(vkCreateDevice(physDevice, &createInfo, nullptr, dest), "Failed to create logical device");
+        VK_ERROR_LOG_AND_RETURN(
+                        vkCreateDevice(renderer->physDevice, &createInfo, nullptr, &renderer->logicalDevice), 
+                        "Failed to create logical device"
+                        );
 
         rtELog_debug_logInfo("Successfully created logical device");
 
-        populationrtERQueueInfoQueueHandles(*queueInfo, *dest);
+        populationrtERQueueInfoQueueHandles(*queueInfo, renderer->logicalDevice);
 
         rtELog_debug_logInfo("Successfully retrieved all queue handles");
 
@@ -465,36 +479,28 @@ enum VkResult rtER_VK_createLogicalDevice(
 
 // TODO: dynamically adjust sharing modes to account for graphics and present queues not being the same
 
-//TODO: create render pass objects
-
 enum VkResult rtER_VK_createSwapchain(
-        VkSwapchainKHR* dest,
-        struct rtER_VK_swapchainInfo* infoDest,
-        VkSurfaceKHR surface,
-        VkPhysicalDevice physDevice,
-        VkDevice logicalDevice,
-        VkImage** swapchainImages,
-        uint32_t* swapchainImageCount
+        struct rtERenderer* renderer
         ) {
         
         VkSurfaceCapabilitiesKHR surfaceCapabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-                physDevice,
-                surface,
+                renderer->physDevice,
+                renderer->surface,
                 &surfaceCapabilities
                 );
 
         uint32_t numSurfaceFormats;
         vkGetPhysicalDeviceSurfaceFormatsKHR(
-                physDevice,
-                surface,
+                renderer->physDevice,
+                renderer->surface,
                 &numSurfaceFormats,
                 nullptr
                 );
         VkSurfaceFormatKHR* surfaceFormats = malloc(sizeof(VkSurfaceFormatKHR) * numSurfaceFormats);
         vkGetPhysicalDeviceSurfaceFormatsKHR(
-                physDevice,
-                surface,
+                renderer->physDevice,
+                renderer->surface,
                 &numSurfaceFormats,
                 surfaceFormats
                 );
@@ -516,7 +522,7 @@ enum VkResult rtER_VK_createSwapchain(
                 .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
                 .pNext = nullptr,
                 .flags = 0,
-                .surface = surface,
+                .surface = renderer->surface,
                 .minImageCount = surfaceCapabilities.minImageCount,
                 .imageFormat = selectedSurfaceFormat.format,
                 .imageColorSpace = selectedSurfaceFormat.colorSpace,
@@ -533,29 +539,29 @@ enum VkResult rtER_VK_createSwapchain(
                 .oldSwapchain = nullptr
         };
 
-        infoDest->imageFormat = selectedSurfaceFormat.format;
-        infoDest->swapchianExtent = swapchainCreateInfo.imageExtent;
+        renderer->swapchainInfo.imageFormat = selectedSurfaceFormat.format;
+        renderer->swapchainInfo.swapchianExtent = swapchainCreateInfo.imageExtent;
 
         VK_ERROR_LOG_AND_RETURN(vkCreateSwapchainKHR(
-               logicalDevice,
+               renderer->logicalDevice,
                &swapchainCreateInfo,
                nullptr,
-               dest
+               &renderer->swapchain
         ), "Failed to create swapchain");
 
         VK_ERROR_LOG_AND_RETURN(vkGetSwapchainImagesKHR(
-                logicalDevice,
-                *dest,
-                swapchainImageCount,
+                renderer->logicalDevice,
+                renderer->swapchain,
+                &renderer->swapchainImageCount,
                 nullptr
         ), "Failed to retrieve swapchain image count");
 
-        (*swapchainImages) = malloc(sizeof(VkImage) * *swapchainImageCount);
+        renderer->swapchainImages = malloc(sizeof(VkImage) * renderer->swapchainImageCount);
         VK_ERROR_LOG_AND_RETURN(vkGetSwapchainImagesKHR(
-                logicalDevice,
-                *dest,
-                swapchainImageCount,
-                *swapchainImages
+                renderer->logicalDevice,
+                renderer->swapchain,
+                &renderer->swapchainImageCount,
+                renderer->swapchainImages
         ), "Failed to retrieve swapchain images");
 
 
@@ -563,21 +569,17 @@ enum VkResult rtER_VK_createSwapchain(
 }
 
 enum VkResult rtER_VK_createImageViews(
-        VkImageView** dest,
-        struct rtER_VK_swapchainInfo swapchainInfo,
-        VkImage* images,
-        uint32_t imageCount,
-        VkDevice logicalDevice
+                struct rtERenderer* renderer
         ) {
-        *dest = malloc(sizeof(VkImageView) * imageCount);
-        for (size_t i = 0; i < imageCount; i++) {
+        renderer->swapchainImageViews = malloc(sizeof(VkImageView) * renderer->swapchainImageCount);
+        for (size_t i = 0; i < renderer->swapchainImageCount; i++) {
                 VkImageViewCreateInfo createInfo = {
                         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                         .pNext = nullptr,
                         .flags = 0,
-                        .image = images[i],
+                        .image = renderer->swapchainImages[i],
                         .viewType = VK_IMAGE_VIEW_TYPE_2D,
-                        .format = swapchainInfo.imageFormat,
+                        .format = renderer->swapchainInfo.imageFormat,
                         .components = {
                                 .r = VK_COMPONENT_SWIZZLE_R,
                                 .g = VK_COMPONENT_SWIZZLE_G,
@@ -597,10 +599,10 @@ enum VkResult rtER_VK_createImageViews(
 
                 VK_ERROR_LOG_AND_RETURN(
                         vkCreateImageView(
-                                logicalDevice,
+                                renderer->logicalDevice,
                                 &createInfo,
                                 nullptr,
-                                &(*dest)[i]
+                                &(renderer->swapchainImageViews[i])
                         ),
 
                         "Failed to create image view"
@@ -612,14 +614,12 @@ enum VkResult rtER_VK_createImageViews(
 }
 
 enum VkResult rtER_VK_createRenderpass(
-        VkRenderPass* dest,
-        VkDevice logicalDevice,
-        struct rtER_VK_swapchainInfo swapchainInfo
+        struct rtERenderer* renderer
         ) {
 
         VkAttachmentDescription imageAttachmentDesc = {
                 .flags = 0,
-                .format = swapchainInfo.imageFormat,
+                .format = renderer->swapchainInfo.imageFormat,
                 .samples = VK_SAMPLE_COUNT_1_BIT, // No MSAA
                 .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
                 .storeOp = VK_ATTACHMENT_STORE_OP_STORE, // Keeps what we draw
@@ -674,45 +674,40 @@ enum VkResult rtER_VK_createRenderpass(
         
         VK_ERROR_LOG_AND_RETURN(
                 vkCreateRenderPass(
-                        logicalDevice,
+                        renderer->logicalDevice,
                         &createInfo,
                         nullptr,
-                        dest),
+                        &renderer->renderPass),
                 "Failed to create render pass");
 
         return VK_SUCCESS;
 }
 
 enum VkResult rtER_VK_createFramebuffers(
-        VkFramebuffer** dest,
-        VkDevice logicalDevice,
-        VkRenderPass renderPass,
-        VkImageView* imageViews,
-        uint32_t numImageViews,
-        struct rtER_VK_swapchainInfo swapchainInfo
+        struct rtERenderer* renderer
         ) {
 
-        (*dest) = malloc(sizeof(VkFramebuffer) * numImageViews);
+        (renderer->framebuffers) = malloc(sizeof(VkFramebuffer) * renderer->swapchainImageCount);
 
-        for (size_t i = 0; i < numImageViews; i++) {
+        for (size_t i = 0; i < renderer->swapchainImageCount; i++) {
                 VkFramebufferCreateInfo createInfo = {
                         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                         .pNext = nullptr,
                         .flags = 0,
-                        .renderPass = renderPass,
+                        .renderPass = renderer->renderPass,
                         .attachmentCount = 1,
-                        .pAttachments = &(imageViews[i]),
-                        .width = swapchainInfo.swapchianExtent.width,
-                        .height = swapchainInfo.swapchianExtent.height,
+                        .pAttachments = &(renderer->swapchainImageViews[i]),
+                        .width = renderer->swapchainInfo.swapchianExtent.width,
+                        .height = renderer->swapchainInfo.swapchianExtent.height,
                         .layers = 1 // ?
                 };
 
                 VK_ERROR_LOG_AND_RETURN(
                         vkCreateFramebuffer(
-                                logicalDevice,
+                                renderer->logicalDevice,
                                 &createInfo,
                                 nullptr,
-                                &(*dest)[i]
+                                &(renderer->framebuffers[i])
                         ),
                         "Failed to create framebuffer"
                 );
@@ -748,12 +743,7 @@ enum VkResult rtER_VK_createShaderModule(
 }
 
 enum VkResult rtER_VK_createGraphicsPipeline(
-        VkPipeline* dest,
-        VkPipelineLayout* layoutDest,
-        VkDevice logicalDevice,
-        VkRenderPass renderpass,
-        struct rtER_VK_swapchainInfo swapchainInfo,
-        VkDescriptorSetLayout UBODescriptorSetLayout
+        struct rtERenderer* renderer
         ) {
 
         uint32_t vertexShaderSize;
@@ -767,13 +757,13 @@ enum VkResult rtER_VK_createGraphicsPipeline(
 
         rtER_VK_createShaderModule(
                 &vertexShaderModule,
-                logicalDevice,
+                renderer->logicalDevice,
                 vertexShaderCode,
                 vertexShaderSize);
 
         rtER_VK_createShaderModule(
                 &fragmentShaderModule,
-                logicalDevice,
+                renderer->logicalDevice,
                 fragmentShaderCode,
                 fragmentShaderSize);
 
@@ -918,9 +908,9 @@ enum VkResult rtER_VK_createGraphicsPipeline(
 
         VkViewport viewport = {
                 .x = 0,
-                .y = swapchainInfo.swapchianExtent.height, // Changes origin to lower left corner
-                .width = swapchainInfo.swapchianExtent.width,
-                .height = -((float)swapchainInfo.swapchianExtent.height), // Changes viewport so < 0 is down and > 0 is up
+                .y = renderer->swapchainInfo.swapchianExtent.height, // Changes origin to lower left corner
+                .width = renderer->swapchainInfo.swapchianExtent.width,
+                .height = -((float)renderer->swapchainInfo.swapchianExtent.height), // Changes viewport so < 0 is down and > 0 is up
                 .minDepth = 0.0f,
                 .maxDepth = 1.0f
         };
@@ -931,8 +921,8 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                         .y = 0
                 },
                 .extent = {
-                        .width = swapchainInfo.swapchianExtent.width,
-                        .height = swapchainInfo.swapchianExtent.height
+                        .width = renderer->swapchainInfo.swapchianExtent.width,
+                        .height = renderer->swapchainInfo.swapchianExtent.height
                 }
         };
 
@@ -951,16 +941,16 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 .pNext = nullptr,
                 .flags = 0,
                 .setLayoutCount = 1,
-                .pSetLayouts = &UBODescriptorSetLayout,
+                .pSetLayouts = &renderer->UBODescriptorSetLayout,
                 .pushConstantRangeCount = 0,
                 .pPushConstantRanges = nullptr
         };
 
         vkCreatePipelineLayout(
-                logicalDevice,
+                renderer->logicalDevice,
                 &pipelineLayoutCreateInfo,
                 nullptr,
-                layoutDest
+                &renderer->pipelineLayout
         );
 
         VkGraphicsPipelineCreateInfo createInfo = {
@@ -979,8 +969,8 @@ enum VkResult rtER_VK_createGraphicsPipeline(
                 .pColorBlendState = &colorBlendState,
                 // TODO: dynamic viewport and scissor
                 .pDynamicState = nullptr,
-                .layout = *layoutDest,
-                .renderPass = renderpass,
+                .layout = renderer->pipelineLayout,
+                .renderPass = renderer->renderPass,
                 .subpass = 0,
                 .basePipelineHandle = VK_NULL_HANDLE,
                 .basePipelineIndex = 0
@@ -988,12 +978,12 @@ enum VkResult rtER_VK_createGraphicsPipeline(
 
         VK_ERROR_LOG_AND_RETURN(
                 vkCreateGraphicsPipelines(
-                        logicalDevice,
+                        renderer->logicalDevice,
                         VK_NULL_HANDLE,
                         1,
                         &createInfo,
                         nullptr,
-                        dest),
+                        &renderer->graphicsPipeline),
                         "Failed to create graphics pipeline"
         );
 
@@ -1001,9 +991,7 @@ enum VkResult rtER_VK_createGraphicsPipeline(
 }
 
 enum VkResult rtER_VK_createCommandPool(
-        VkCommandPool* dest,
-        VkDevice logicalDevice,
-        struct rtER_VK_queueInfo queueInfo 
+        struct rtERenderer* renderer
         ) {
 
         struct rtER_VK_queueCapabilities reqCapa = {
@@ -1013,7 +1001,7 @@ enum VkResult rtER_VK_createCommandPool(
 
         uint32_t qfi;
         rtER_VK_getQueueWithCapabilities(
-                queueInfo,
+                renderer->queueInfo,
                 reqCapa,
                 &qfi);
 
@@ -1026,10 +1014,10 @@ enum VkResult rtER_VK_createCommandPool(
 
         VK_ERROR_LOG_AND_RETURN(
                vkCreateCommandPool(
-                logicalDevice,
+                renderer->logicalDevice,
                 &createInfo,
                 nullptr,
-                dest
+                &renderer->commandPool 
                ),
                "Failed to create command pool"
         );
@@ -1255,8 +1243,7 @@ enum VkResult rtER_VK_bufferData(
 }
 
 enum VkResult rtER_VK_createDescriptorSetLayout(
-                VkDescriptorSetLayout* dest, 
-                VkDevice logicalDevice,
+                struct rtERenderer* renderer,
                 uint32_t binding,
                 uint32_t descriptorCount,
                 enum VkDescriptorType descriptorType,
@@ -1281,10 +1268,10 @@ enum VkResult rtER_VK_createDescriptorSetLayout(
 
         VK_ERROR_LOG_AND_RETURN(
                 vkCreateDescriptorSetLayout(
-                        logicalDevice,
+                        renderer->logicalDevice,
                         &createInfo,
                         nullptr,
-                        dest
+                        &renderer->UBODescriptorSetLayout
                 ),
                 "Failed to create descriptor set layout"
                 );
