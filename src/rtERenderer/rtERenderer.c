@@ -136,6 +136,12 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                 renderer->logicalDevice
                 );
 
+        renderer->uniformBufferCount = 0;
+        renderer->uniformBuffers = nullptr;
+        renderer->vertexBufferCount = 0;
+        renderer->vertexBuffers = nullptr;
+
+        /*
         rtER_VK_createBuffer(
                 &renderer->vertexBuffer,
                 sizeof(struct vertex) * 3,
@@ -148,7 +154,6 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                 nullptr,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
                 );
-
 
         struct vertex vertices[3] = {
                 {0.0, 0.5, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0},
@@ -251,36 +256,35 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                         0,
                         nullptr);
 
+        */
 
         renderer->currentFrame = 0;
 
         return rtEErrorCode_SUCCESS;
 }
 
-void rtER_bufferVertexData(struct rtERenderer* renderer, void* data, size_t elementSize, size_t elementCount) {
-
-        if (renderer->vertexBuffer.bufferSize < elementSize * elementCount) {
-                // destroy current buffer and create new sufficiently sized buffer
-                struct rtER_VK_queueCapabilities queueCaps = {
-                        .queueFlags = VK_QUEUE_GRAPHICS_BIT,
-                        .presentationSupport = VK_FALSE
-                };
-                uint32_t queueIndex;
+static void recreateBuffer(struct rtERenderer* renderer, struct rtER_VK_Buffer* buffer, size_t newSize) {
+        struct rtER_VK_queueCapabilities queueCaps = {
+                .queueFlags = VK_QUEUE_GRAPHICS_BIT,
+                .presentationSupport = VK_FALSE
+        };
+        uint32_t queueIndex;
+        // TODO: a little sussy, consider storing the graphics queue index/handle directly in renderer
         vkQueueWaitIdle(*rtER_VK_getQueueWithCapabilities(renderer->queueInfo, queueCaps, &queueIndex));
                 vkDestroyBuffer(
                         renderer->logicalDevice,
-                        renderer->vertexBuffer.buffer,
+                        buffer->buffer,
                         nullptr
                         );
                 
                 vkFreeMemory(
                         renderer->logicalDevice,
-                        renderer->vertexBuffer.bufferDeviceMemory,
+                        buffer->bufferDeviceMemory,
                         nullptr);
 
                 rtER_VK_createBuffer(
-                        &renderer->vertexBuffer,
-                        elementSize * elementCount,
+                        buffer,
+                        newSize,
                         renderer->logicalDevice,
                         renderer->physDevice,
                         0,
@@ -290,6 +294,8 @@ void rtER_bufferVertexData(struct rtERenderer* renderer, void* data, size_t elem
                         nullptr,
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
                 );
+                // idk why this is here twice
+                /*
                 rtER_VK_createBuffer(
                         &renderer->vertexBuffer,
                         elementSize * elementCount,
@@ -302,45 +308,91 @@ void rtER_bufferVertexData(struct rtERenderer* renderer, void* data, size_t elem
                         nullptr,
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
                 );
+                */
+}
+
+void rtER_bufferVertexData(struct rtERenderer* renderer, rter_vbo_t vbo, void* data, size_t dataSize) {
+        struct rtER_VK_Buffer* theBufferInQuestion = &renderer->vertexBuffers[*vbo];
+
+        if (theBufferInQuestion->bufferSize < dataSize) {
+                // destroy current buffer and create new sufficiently sized buffer
+                recreateBuffer(renderer, theBufferInQuestion, dataSize);
         }
-        
         // buffer data to buffer
         rtER_VK_bufferData(
                 data,
                 renderer->logicalDevice,
-                renderer->vertexBuffer.bufferDeviceMemory,
+                theBufferInQuestion->bufferDeviceMemory,
                 0,
-                elementCount * elementSize,
+                dataSize,
                 0
                 );
 }
 
-void rtER_bufferUniformData(struct rtERenderer* renderer, size_t size, mat4 model, mat4 camera, mat4 proj) {
+static struct rtER_VK_Buffer createNullBuffer() {
+        struct rtER_VK_Buffer newNullBuff = {
+                .buffer = nullptr,
+                .bufferDeviceMemory = nullptr,
+                .bufferSize = 0
+        };
 
-        mat4 uboData[3];
+        return newNullBuff;
+}
 
-        memcpy(uboData, model, 64);
-        memcpy(uboData+1, camera, 64);
-        memcpy(uboData+2, proj, 64);
+enum rtEErrorCode rtER_createVertexBuffer(struct rtERenderer* renderer, rter_vbo_t vbo) {
+        renderer->vertexBuffers = 
+                realloc(
+                        renderer->vertexBuffers, 
+                        sizeof(struct rtERenderer) * renderer->vertexBufferCount + 1
+                );
 
+        renderer->vertexBuffers[renderer->vertexBufferCount] = createNullBuffer();
+        *vbo = renderer->vertexBufferCount;
+
+        renderer->vertexBufferCount++;
+        return rtEErrorCode_SUCCESS;
+}
+
+enum rtEErrorCode rtER_createUniformBuffer(struct rtERenderer* renderer, rter_ubo_t ubo) {
+        renderer->uniformBuffers= 
+                realloc(
+                        renderer->uniformBuffers, 
+                        sizeof(struct rtERenderer) * renderer->uniformBufferCount + 1
+                );
+
+        renderer->uniformBuffers[renderer->uniformBufferCount] = createNullBuffer();
+        *ubo = renderer->uniformBufferCount;
+
+        renderer->uniformBufferCount++;
+        return rtEErrorCode_SUCCESS;
+}
+
+void rtER_bufferUniformData(struct rtERenderer* renderer, rter_ubo_t ubo, void* data, size_t dataSize) {
+        struct rtER_VK_Buffer* theBufferInQuestion = &renderer->uniformBuffers[*ubo];
+
+        if (theBufferInQuestion->bufferSize < dataSize) {
+                // destroy current buffer and create new sufficiently sized buffer
+                recreateBuffer(renderer, theBufferInQuestion, dataSize);
+        }
         rtER_VK_bufferData(
-                uboData,
+                data,
                 renderer->logicalDevice,
-                renderer->UBO.bufferDeviceMemory,
+                theBufferInQuestion->bufferDeviceMemory,
                 0,
-                size,
+                dataSize,
                 0
         );
 
         struct VkDescriptorBufferInfo bufferInfo = {
-                .buffer = renderer->UBO.buffer,
+                .buffer = theBufferInQuestion->buffer,
                 .offset = 0,
-                .range = VK_WHOLE_SIZE
+                .range = dataSize
         };
 
         struct VkWriteDescriptorSet writeSet = {
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .pNext = nullptr,
+                // yeesh
                 .dstSet = renderer->UBODescriptorSet,
                 .dstBinding = 0,
                 .dstArrayElement = 0,
