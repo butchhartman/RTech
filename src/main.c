@@ -121,8 +121,16 @@ int main() {
 
 
         rtEW_showWindow(window);  
+        rter_vbo_t vbo = nullptr;
+        (void)vbo;
+        rtER_createVertexBuffer(renderer, &vbo);
+        rtER_bufferVertexData(renderer, vbo, vertices, sizeof(struct vertex) * 6);
+        rtER_bindVertexBuffer(renderer, vbo);
 
-        rtER_bufferVertexData(renderer, vertices, sizeof(struct vertex), 6);
+        rter_ubo_t ubo = nullptr;
+        (void)ubo;
+        rtER_createUniformBuffer(renderer, &ubo);
+
         rtELog_log("Beginning main loop");
 
         rtEW_setInputCallback(window, handleInput);
@@ -171,7 +179,12 @@ int main() {
 
                 rtEMath_mat4CreatePerspectiveProjection(1.5707, .01, 100, 16.0/9.0, proj);
 
-                rtER_bufferUniformData(renderer, 192, model, camera, proj);
+                mat4 ubodata[3];
+                memcpy(ubodata, model, sizeof(float) * 16);
+                memcpy(ubodata + 1, camera, sizeof(float) * 16);
+                memcpy(ubodata + 2, proj, sizeof(float) * 16);
+
+                rtER_bufferUniformData(renderer, ubo, ubodata, sizeof(float) * 16 * 3);
 
                 rtER_drawFrame(renderer);
 

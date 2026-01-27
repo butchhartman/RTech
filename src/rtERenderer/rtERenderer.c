@@ -140,6 +140,8 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
         renderer->uniformBuffers = nullptr;
         renderer->vertexBufferCount = 0;
         renderer->vertexBuffers = nullptr;
+        renderer->boundVertexBufferCount = 0;
+        renderer->boundVertexBufferIndices = nullptr;
 
         /*
         rtER_VK_createBuffer(
@@ -172,7 +174,7 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                 sizeof(struct vertex) * 3,
                 0
         );
-
+*/
         rtER_VK_createDescriptorPool(
                         &renderer->UBODescriptorPool,
                         renderer->logicalDevice
@@ -184,7 +186,7 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                         renderer->UBODescriptorPool,
                         renderer->logicalDevice
                 );
-
+/*
         rtER_VK_createBuffer(
                 &renderer->UBO,
                 192,
@@ -237,6 +239,7 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                 .range = VK_WHOLE_SIZE
         };
 
+
         struct VkWriteDescriptorSet writeSet = {
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .pNext = nullptr,
@@ -263,7 +266,7 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
         return rtEErrorCode_SUCCESS;
 }
 
-static void recreateBuffer(struct rtERenderer* renderer, struct rtER_VK_Buffer* buffer, size_t newSize) {
+static void recreateBuffer(struct rtERenderer* renderer, struct rtER_VK_Buffer* buffer, size_t newSize, VkBufferUsageFlags bufferUsage) {
         struct rtER_VK_queueCapabilities queueCaps = {
                 .queueFlags = VK_QUEUE_GRAPHICS_BIT,
                 .presentationSupport = VK_FALSE
@@ -288,7 +291,7 @@ static void recreateBuffer(struct rtERenderer* renderer, struct rtER_VK_Buffer* 
                         renderer->logicalDevice,
                         renderer->physDevice,
                         0,
-                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                        bufferUsage,
                         VK_SHARING_MODE_EXCLUSIVE,
                         0,
                         nullptr,
@@ -316,7 +319,7 @@ void rtER_bufferVertexData(struct rtERenderer* renderer, rter_vbo_t vbo, void* d
 
         if (theBufferInQuestion->bufferSize < dataSize) {
                 // destroy current buffer and create new sufficiently sized buffer
-                recreateBuffer(renderer, theBufferInQuestion, dataSize);
+                recreateBuffer(renderer, theBufferInQuestion, dataSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
         }
         // buffer data to buffer
         rtER_VK_bufferData(
@@ -339,29 +342,31 @@ static struct rtER_VK_Buffer createNullBuffer() {
         return newNullBuff;
 }
 
-enum rtEErrorCode rtER_createVertexBuffer(struct rtERenderer* renderer, rter_vbo_t vbo) {
+enum rtEErrorCode rtER_createVertexBuffer(struct rtERenderer* renderer, rter_vbo_t* vbo) {
         renderer->vertexBuffers = 
                 realloc(
                         renderer->vertexBuffers, 
-                        sizeof(struct rtERenderer) * renderer->vertexBufferCount + 1
+                        sizeof(struct rtERenderer) * (renderer->vertexBufferCount + 1)
                 );
 
         renderer->vertexBuffers[renderer->vertexBufferCount] = createNullBuffer();
-        *vbo = renderer->vertexBufferCount;
+        *vbo = malloc(sizeof(uint32_t));
+        **vbo = renderer->vertexBufferCount;
 
         renderer->vertexBufferCount++;
         return rtEErrorCode_SUCCESS;
 }
 
-enum rtEErrorCode rtER_createUniformBuffer(struct rtERenderer* renderer, rter_ubo_t ubo) {
+enum rtEErrorCode rtER_createUniformBuffer(struct rtERenderer* renderer, rter_ubo_t* ubo) {
         renderer->uniformBuffers= 
                 realloc(
                         renderer->uniformBuffers, 
-                        sizeof(struct rtERenderer) * renderer->uniformBufferCount + 1
+                        sizeof(struct rtERenderer) * (renderer->uniformBufferCount + 1)
                 );
 
         renderer->uniformBuffers[renderer->uniformBufferCount] = createNullBuffer();
-        *ubo = renderer->uniformBufferCount;
+        *ubo = malloc(sizeof(uint32_t));
+        **ubo = renderer->uniformBufferCount;
 
         renderer->uniformBufferCount++;
         return rtEErrorCode_SUCCESS;
@@ -372,7 +377,7 @@ void rtER_bufferUniformData(struct rtERenderer* renderer, rter_ubo_t ubo, void* 
 
         if (theBufferInQuestion->bufferSize < dataSize) {
                 // destroy current buffer and create new sufficiently sized buffer
-                recreateBuffer(renderer, theBufferInQuestion, dataSize);
+                recreateBuffer(renderer, theBufferInQuestion, dataSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
         }
         rtER_VK_bufferData(
                 data,
@@ -409,6 +414,16 @@ void rtER_bufferUniformData(struct rtERenderer* renderer, rter_ubo_t ubo, void* 
                         0,
                         nullptr);
 
+}
+
+void rtER_bindVertexBuffer(struct rtERenderer* renderer, rter_vbo_t vbo) {
+        renderer->boundVertexBufferIndices = realloc(
+                        renderer->boundVertexBufferIndices,
+                        sizeof(struct rtER_VK_Buffer) * (renderer->boundVertexBufferCount + 1)
+                        );
+
+        renderer->boundVertexBufferIndices[renderer->boundVertexBufferCount] = *vbo;
+        renderer->boundVertexBufferCount++;
 }
 
 void rtER_drawFrame(struct rtERenderer* renderer) {
@@ -484,17 +499,26 @@ void rtER_drawFrame(struct rtERenderer* renderer) {
                 nullptr);
 
         vkCmdBindPipeline(renderer->commandBuffer[renderer->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->graphicsPipeline);
-        
+
         VkDeviceSize offset = 0;
+        // TODO: Use the memory allocator (or a pre-defined maximum) to do this efficiently.
+        VkBuffer* vBuffers = malloc(sizeof(VkBuffer) * renderer->boundVertexBufferCount);
+
+        for (size_t i = 0; i < renderer->boundVertexBufferCount; i++) {
+                vBuffers[i] = renderer->vertexBuffers[renderer->boundVertexBufferIndices[i]].buffer;
+        }
+
+        // TODO: Figure out how to correctly use this command (remember what vertex input bindings and find a method of customizing them :P)
+
         vkCmdBindVertexBuffers(
                 renderer->commandBuffer[renderer->currentFrame],
                 0,
-                1,
-                &renderer->vertexBuffer.buffer,
+                renderer->boundVertexBufferCount,
+                vBuffers,
                 &offset
         );
 
-        vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], renderer->vertexBuffer.bufferSize / sizeof(struct vertex), 1, 0, 0); // Remember - this  needs to know the # of vertices to draw
+        vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], 6, 1, 0, 0); // Remember - this  needs to know the # of vertices to draw
 
         vkCmdEndRenderPass(renderer->commandBuffer[renderer->currentFrame]);
 
@@ -547,6 +571,8 @@ void rtER_drawFrame(struct rtERenderer* renderer) {
         vkQueuePresentKHR(*graphicsq, &present);
 
         renderer->currentFrame = (renderer->currentFrame + 1) % MAX_CONCURRENT_FRAMES;
+
+        free(vBuffers);
 }
 
 enum rtEErrorCode rtER_cleanupRenderer(struct rtERenderer** rendererPtr) {

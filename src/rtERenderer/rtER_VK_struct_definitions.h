@@ -64,6 +64,9 @@ struct rtERenderer {
 
         uint32_t uniformBufferCount;
         uint32_t vertexBufferCount;
+        uint32_t boundVertexBufferCount;
+        uint32_t* boundVertexBufferIndices;
+
         struct rtER_VK_Buffer* uniformBuffers;
         struct rtER_VK_Buffer* vertexBuffers;
 };

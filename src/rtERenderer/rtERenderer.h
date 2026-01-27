@@ -13,9 +13,11 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** renderer, struct 
 
 void rtER_drawFrame(struct rtERenderer* renderer);
 
-enum rtEErrorCode rtER_createVertexBuffer(struct rtERenderer* renderer, rter_vbo_t vbo);
+enum rtEErrorCode rtER_createVertexBuffer(struct rtERenderer* renderer, rter_vbo_t* vbo);
 
-enum rtEErrorCode rtER_createUniformBuffer(struct rtERenderer* renderer, rter_ubo_t ubo);
+enum rtEErrorCode rtER_createUniformBuffer(struct rtERenderer* renderer, rter_ubo_t* ubo);
+
+void rtER_bindVertexBuffer(struct rtERenderer* renderer, rter_vbo_t vbo);
 
 void rtER_bufferVertexData(struct rtERenderer* renderer, rter_vbo_t vbo, void* data, size_t dataSize);
 
