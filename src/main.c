@@ -102,6 +102,8 @@ static void handleInput(struct inputEvent event) {
 int main() {
         rtELog_init("RTechLog");
 
+        begin = clock();
+
         if (rtEW_init() != rtEErrorCode_SUCCESS) {
                 rtELog_logError("rtEW Faild to initialize");
                 return EXIT_FAILURE;
@@ -121,14 +123,13 @@ int main() {
 
 
         rtEW_showWindow(window);  
+
         rter_vbo_t vbo = nullptr;
-        (void)vbo;
         rtER_createVertexBuffer(renderer, &vbo);
         rtER_bufferVertexData(renderer, vbo, vertices, sizeof(struct vertex) * 6);
         rtER_bindVertexBuffer(renderer, vbo);
 
         rter_ubo_t ubo = nullptr;
-        (void)ubo;
         rtER_createUniformBuffer(renderer, &ubo);
 
         rtELog_log("Beginning main loop");
@@ -138,6 +139,7 @@ int main() {
         clock_t start = clock();
 
         while(!rtEW_windowShouldClose(window)) {
+
                 double elapsedTime = ((clock() - start) / (double)CLOCKS_PER_SEC);
                 start = clock();
 

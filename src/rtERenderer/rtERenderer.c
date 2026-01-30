@@ -428,18 +428,23 @@ void rtER_drawFrame(struct rtERenderer* renderer) {
 
         vkCmdBindPipeline(renderer->commandBuffer[renderer->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->graphicsPipeline);
 
-        VkDeviceSize offset = 0;
+        // Only draw if there is something to draw
+        // Prevents crashing
+        if (renderer->boundVertexBuffersCount > 0) {
+                VkDeviceSize offset = 0;
 
-        vkCmdBindVertexBuffers(
-                renderer->commandBuffer[renderer->currentFrame],
-                0,
-                renderer->boundVertexBuffersCount,
-                renderer->boundVertexBuffers,
-                &offset
-        );
-
-        vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], 6, 1, 0, 0); // Remember - this  needs to know the # of vertices to draw
-
+                vkCmdBindVertexBuffers(
+                        renderer->commandBuffer[renderer->currentFrame],
+                        0,
+                        // Specifies # vertex input bindings that are updated. MEANING: There must be a binding for each vertex buffer. 
+                        // uh oh!!
+                        renderer->boundVertexBuffersCount, 
+                        renderer->boundVertexBuffers,
+                        &offset
+                );
+                // Remember - this  needs to know the # of vertices to draw
+                vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], 6, 1, 0, 0); 
+        }
         vkCmdEndRenderPass(renderer->commandBuffer[renderer->currentFrame]);
 
         vkEndCommandBuffer(renderer->commandBuffer[renderer->currentFrame]);
