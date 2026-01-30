@@ -19,6 +19,8 @@ enum rtEErrorCode rtER_createUniformBuffer(struct rtERenderer* renderer, rter_ub
 
 void rtER_bindVertexBuffer(struct rtERenderer* renderer, rter_vbo_t vbo);
 
+void rtER_unbindVertexBuffer(struct rtERenderer* renderer, rter_vbo_t vbo);
+
 void rtER_bufferVertexData(struct rtERenderer* renderer, rter_vbo_t vbo, void* data, size_t dataSize);
 
 void rtER_bufferUniformData(struct rtERenderer* renderer, rter_ubo_t ubo, void* data, size_t dataSize);
