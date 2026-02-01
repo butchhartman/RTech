@@ -2,7 +2,7 @@
 #define GAME_CUBE_H_
 #include "game/renderObjects/vertex.h"
 
-struct vertex cubeVertices[36] = {
+static const struct vertex cubeVertices[36] = {
         // position        UV         color
         // Front face
         {-0.5, 0.5, 0.5, 0.0, 0.0, 0.0, 1.0, 0.0}, // Top left front

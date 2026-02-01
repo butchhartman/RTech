@@ -443,7 +443,7 @@ void rtER_drawFrame(struct rtERenderer* renderer) {
                         &offset
                 );
                 // Remember - this  needs to know the # of vertices to draw
-                vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], 36, 1, 0, 0); 
+                vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], 8 * 16 * 8 * 36, 1, 0, 0); 
         }
         vkCmdEndRenderPass(renderer->commandBuffer[renderer->currentFrame]);
 

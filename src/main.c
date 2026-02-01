@@ -1,3 +1,4 @@
+#include "game/renderObjects/chunk.h"
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <string.h>
@@ -121,9 +122,17 @@ int main() {
 
         rtEW_showWindow(window);  
 
+        struct chunk* myChunk = rtGame_createChunk();
+
+        rtELog_debug_logInfo("Created chunk");
+
+        rtGame_chunkCreateMesh(myChunk);
+
+        rtELog_debug_logInfo("Created chunk mesh");
+
         rter_vbo_t vbo = nullptr;
         rtER_createVertexBuffer(renderer, &vbo);
-        rtER_bufferVertexData(renderer, vbo, cubeVertices, sizeof(struct vertex) * 36);
+        rtER_bufferVertexData(renderer, vbo, (void*)rtGame_chunkGetMeshPtr(myChunk), sizeof(struct vertex) *36* rtGame_chunkGetMeshSize(myChunk));
         rtER_bindVertexBuffer(renderer, vbo);
 
         rter_ubo_t ubo = nullptr;
@@ -170,8 +179,6 @@ int main() {
 
                 rtEMath_mat4CreateModel(modelPos, model);
 
-                //vec3 look = {0.0, 0.0, -1.0};
-                //rtEMath_vec3Add(cameraPos, look, cameraTargetPos);
                 rtEMath_vec3Add(cameraPos, cameraLookDirection, cameraTargetPos);
 
                 rtEMath_mat4CreateLookAt(cameraPos, cameraTargetPos, up, camera);
