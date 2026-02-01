@@ -57,7 +57,7 @@ int main() {
 
         rter_vbo_t vbo = nullptr;
         rtER_createVertexBuffer(renderer, &vbo);
-        rtER_bufferVertexData(renderer, vbo, (void*)rtGame_chunkGetMeshPtr(myChunk), sizeof(struct vertex) *36* rtGame_chunkGetMeshSize(myChunk));
+        rtER_bufferVertexData(renderer, vbo, (void*)rtGame_chunkGetMeshPtr(myChunk), sizeof(struct vertex) * 36 * rtGame_chunkGetMeshSize(myChunk));
         rtER_bindVertexBuffer(renderer, vbo);
 
         rter_ubo_t ubo = nullptr;
@@ -78,7 +78,7 @@ int main() {
 
                 rtGame_cameraUpdate(gameCamera, elapsedTime);
 
-                rtER_bufferUniformData(renderer, ubo, rtGame_getCameraData(gameCamera), sizeof(float) * 16 * 3);
+                rtER_bufferUniformData(renderer, ubo, rtGame_getCameraData(gameCamera), RTEMATH_MAT4_SIZE * 3);
 
                 rtER_drawFrame(renderer);
 
