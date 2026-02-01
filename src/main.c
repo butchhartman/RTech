@@ -1,21 +1,18 @@
+#define _USE_MATH_DEFINES
+#include <math.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtELog/rtELog.h" 
 #include "rtEMath/rtEMath.h"
 #include "rtEW/rtenginewindow.h"
 #include "rtERenderer/rtERenderer.h"
-#include <string.h>
-#define _USE_MATH_DEFINES
-#include <math.h>
-#include <stdlib.h>
-#include <time.h>
+#include "game/renderObjects/vertex.h"
+#include "game/renderObjects/cube.h"
 
-
-struct vertex {
-        float x, y, z;
-        float u, v;
-        float r, g, b;
-};
-
+/*
 struct vertex vertices[6] = {
         {-1.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0, 0.0},
         {0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.5, 1.0},
@@ -24,6 +21,8 @@ struct vertex vertices[6] = {
         {1.0, -1.0, 0.0, 0.0, 0.0, 0.3, 0.5, 0.3}, 
         {0.0, 0.0, 0.0, 0.0, 0.0, 0.4, 0.7, 0.3},
 };
+*/
+
 vec3 modelPos = {0.0, 0.0, -1.0};
 mat4 model;
 
@@ -102,8 +101,6 @@ static void handleInput(struct inputEvent event) {
 int main() {
         rtELog_init("RTechLog");
 
-        begin = clock();
-
         if (rtEW_init() != rtEErrorCode_SUCCESS) {
                 rtELog_logError("rtEW Faild to initialize");
                 return EXIT_FAILURE;
@@ -126,7 +123,7 @@ int main() {
 
         rter_vbo_t vbo = nullptr;
         rtER_createVertexBuffer(renderer, &vbo);
-        rtER_bufferVertexData(renderer, vbo, vertices, sizeof(struct vertex) * 6);
+        rtER_bufferVertexData(renderer, vbo, cubeVertices, sizeof(struct vertex) * 36);
         rtER_bindVertexBuffer(renderer, vbo);
 
         rter_ubo_t ubo = nullptr;
