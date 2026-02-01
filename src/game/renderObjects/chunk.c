@@ -72,9 +72,9 @@ size_t rtGame_chunkGetMeshSize(struct chunk* chunk) {
         return chunk->meshSize;
 }
 
-void rtGame_destroyChunk(struct chunk* chunk) {
-        free(chunk->mesh);
-        free(chunk);
-        chunk = nullptr;
+void rtGame_destroyChunk(struct chunk** chunk) {
+        free((*chunk)->mesh);
+        free(*chunk);
+        *chunk = nullptr;
 }
 

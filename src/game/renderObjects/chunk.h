@@ -15,7 +15,7 @@ struct vertex* rtGame_chunkGetMeshPtr(struct chunk* chunk);
 
 size_t rtGame_chunkGetMeshSize(struct chunk* chunk);
 
-void rtGame_destroyChunk(struct chunk* chunk);
+void rtGame_destroyChunk(struct chunk** chunk);
 
 
 #endif // CHUNK_H_
