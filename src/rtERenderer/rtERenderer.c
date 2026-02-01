@@ -136,38 +136,6 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                 renderer->logicalDevice
                 );
 
-        rtER_VK_createBuffer(
-                &renderer->vertexBuffer,
-                sizeof(struct vertex) * 3,
-                renderer->logicalDevice,
-                renderer->physDevice,
-                0,
-                VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                VK_SHARING_MODE_EXCLUSIVE,
-                0,
-                nullptr,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-                );
-
-
-        struct vertex vertices[3] = {
-                {0.0, 0.5, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0},
-                {0.5, -0.5, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0},
-                {-0.5, -0.5, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0}, // I may be stupid... watch out for culling...
-        };
-
-        // TODO: Now, I'm going to need a way to specify vertices through the rtER API
-        // TODO: Perhaps also a way to create/reallocate buffers via the api. I think the way the pipeline consumes vertex data is either going to be set in stone or configurable via api. Probably set in stone because it seems excessive to try otherwise
-
-        rtER_VK_bufferData(
-                vertices,
-                renderer->logicalDevice,
-                renderer->vertexBuffer.bufferDeviceMemory,
-                0,
-                sizeof(struct vertex) * 3,
-                0
-        );
-
         rtER_VK_createDescriptorPool(
                         &renderer->UBODescriptorPool,
                         renderer->logicalDevice
@@ -180,167 +148,137 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                         renderer->logicalDevice
                 );
 
-        rtER_VK_createBuffer(
-                &renderer->UBO,
-                192,
-                renderer->logicalDevice,
-                renderer->physDevice,
-                0,
-                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                VK_SHARING_MODE_EXCLUSIVE,
-                0,
-                nullptr,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-                );
+        renderer->uniformBufferCount = 0;
+        renderer->uniformBuffers = nullptr;
 
+        renderer->vertexBufferCount = 0;
+        renderer->vertexBuffers = nullptr;
 
-        vec3 modelPos = {0.0, 0.0, -1.0};
-        mat4 model;
-        rtEMath_mat4CreateModel(modelPos, model);
-
-        vec3 cameraPos = {1.0, 0.0, 0.0};
-        vec3 cameraTargetPos = {0.0, 0.0, -1.0};
-        vec3 up = {0.0, 1.0, 0.0};
-        mat4 camera;
-        rtEMath_mat4CreateLookAt(cameraPos, cameraTargetPos, up, camera);
-
-        mat4 proj;
-        rtEMath_mat4CreatePerspectiveProjection(1.5707, .01, 100, 16.0/9.0, proj);
-
-
-        mat4 uboData[3] = {
-                RTEMATH_MAT4_IDENTITY,
-                RTEMATH_MAT4_IDENTITY,
-                RTEMATH_MAT4_IDENTITY
-        };
-        memcpy(uboData, model, 64);
-        memcpy(uboData+1, camera, 64);
-        memcpy(uboData+2, proj, 64);
-
-        rtER_VK_bufferData(
-                uboData,
-                renderer->logicalDevice,
-                renderer->UBO.bufferDeviceMemory,
-                0,
-                192,
-                0
-        );
-
-        struct VkDescriptorBufferInfo bufferInfo = {
-                .buffer = renderer->UBO.buffer,
-                .offset = 0,
-                .range = VK_WHOLE_SIZE
-        };
-
-        struct VkWriteDescriptorSet writeSet = {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .pNext = nullptr,
-                .dstSet = renderer->UBODescriptorSet,
-                .dstBinding = 0,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .pBufferInfo = &bufferInfo,
-
-        };
-
-        vkUpdateDescriptorSets(
-                        renderer->logicalDevice,
-                        1,
-                        &writeSet,
-                        0,
-                        nullptr);
-
+        renderer->boundVertexBuffersCount = 0;
+        renderer->boundVertexBuffers = nullptr;
 
         renderer->currentFrame = 0;
 
         return rtEErrorCode_SUCCESS;
 }
 
-void rtER_bufferVertexData(struct rtERenderer* renderer, void* data, size_t elementSize, size_t elementCount) {
-
-        if (renderer->vertexBuffer.bufferSize < elementSize * elementCount) {
-                // destroy current buffer and create new sufficiently sized buffer
-                struct rtER_VK_queueCapabilities queueCaps = {
-                        .queueFlags = VK_QUEUE_GRAPHICS_BIT,
-                        .presentationSupport = VK_FALSE
-                };
-                uint32_t queueIndex;
+static void recreateBuffer(struct rtERenderer* renderer, struct rtER_VK_Buffer* buffer, size_t newSize, VkBufferUsageFlags bufferUsage) {
+        struct rtER_VK_queueCapabilities queueCaps = {
+                .queueFlags = VK_QUEUE_GRAPHICS_BIT,
+                .presentationSupport = VK_FALSE
+        };
+        uint32_t queueIndex;
+        // TODO: a little sussy, consider storing the graphics queue index/handle directly in renderer
         vkQueueWaitIdle(*rtER_VK_getQueueWithCapabilities(renderer->queueInfo, queueCaps, &queueIndex));
                 vkDestroyBuffer(
                         renderer->logicalDevice,
-                        renderer->vertexBuffer.buffer,
+                        buffer->buffer,
                         nullptr
                         );
                 
                 vkFreeMemory(
                         renderer->logicalDevice,
-                        renderer->vertexBuffer.bufferDeviceMemory,
+                        buffer->bufferDeviceMemory,
                         nullptr);
 
                 rtER_VK_createBuffer(
-                        &renderer->vertexBuffer,
-                        elementSize * elementCount,
+                        buffer,
+                        newSize,
                         renderer->logicalDevice,
                         renderer->physDevice,
                         0,
-                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                        bufferUsage,
                         VK_SHARING_MODE_EXCLUSIVE,
                         0,
                         nullptr,
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
                 );
-                rtER_VK_createBuffer(
-                        &renderer->vertexBuffer,
-                        elementSize * elementCount,
-                        renderer->logicalDevice,
-                        renderer->physDevice,
-                        0,
-                        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                        VK_SHARING_MODE_EXCLUSIVE,
-                        0,
-                        nullptr,
-                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-                );
+}
+
+void rtER_bufferVertexData(struct rtERenderer* renderer, rter_vbo_t vbo, void* data, size_t dataSize) {
+        struct rtER_VK_Buffer* theBufferInQuestion = &renderer->vertexBuffers[*vbo];
+
+        if (theBufferInQuestion->bufferSize < dataSize) {
+                // destroy current buffer and create new sufficiently sized buffer
+                recreateBuffer(renderer, theBufferInQuestion, dataSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
         }
-        
         // buffer data to buffer
         rtER_VK_bufferData(
                 data,
                 renderer->logicalDevice,
-                renderer->vertexBuffer.bufferDeviceMemory,
+                theBufferInQuestion->bufferDeviceMemory,
                 0,
-                elementCount * elementSize,
+                dataSize,
                 0
                 );
 }
 
-void rtER_bufferUniformData(struct rtERenderer* renderer, size_t size, mat4 model, mat4 camera, mat4 proj) {
+static struct rtER_VK_Buffer createNullBuffer() {
+        struct rtER_VK_Buffer newNullBuff = {
+                .buffer = nullptr,
+                .bufferDeviceMemory = nullptr,
+                .bufferSize = 0
+        };
 
-        mat4 uboData[3];
+        return newNullBuff;
+}
 
-        memcpy(uboData, model, 64);
-        memcpy(uboData+1, camera, 64);
-        memcpy(uboData+2, proj, 64);
+enum rtEErrorCode rtER_createVertexBuffer(struct rtERenderer* renderer, rter_vbo_t* vbo) {
+        renderer->vertexBuffers = 
+                realloc(
+                        renderer->vertexBuffers, 
+                        sizeof(struct rtERenderer) * (renderer->vertexBufferCount + 1)
+                );
 
+        renderer->vertexBuffers[renderer->vertexBufferCount] = createNullBuffer();
+        *vbo = malloc(sizeof(uint32_t));
+        **vbo = renderer->vertexBufferCount;
+
+        renderer->vertexBufferCount++;
+        return rtEErrorCode_SUCCESS;
+}
+
+enum rtEErrorCode rtER_createUniformBuffer(struct rtERenderer* renderer, rter_ubo_t* ubo) {
+        renderer->uniformBuffers= 
+                realloc(
+                        renderer->uniformBuffers, 
+                        sizeof(struct rtERenderer) * (renderer->uniformBufferCount + 1)
+                );
+
+        renderer->uniformBuffers[renderer->uniformBufferCount] = createNullBuffer();
+        *ubo = malloc(sizeof(uint32_t));
+        **ubo = renderer->uniformBufferCount;
+
+        renderer->uniformBufferCount++;
+        return rtEErrorCode_SUCCESS;
+}
+
+void rtER_bufferUniformData(struct rtERenderer* renderer, rter_ubo_t ubo, void* data, size_t dataSize) {
+        struct rtER_VK_Buffer* theBufferInQuestion = &renderer->uniformBuffers[*ubo];
+
+        if (theBufferInQuestion->bufferSize < dataSize) {
+                // destroy current buffer and create new sufficiently sized buffer
+                recreateBuffer(renderer, theBufferInQuestion, dataSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+        }
         rtER_VK_bufferData(
-                uboData,
+                data,
                 renderer->logicalDevice,
-                renderer->UBO.bufferDeviceMemory,
+                theBufferInQuestion->bufferDeviceMemory,
                 0,
-                size,
+                dataSize,
                 0
         );
 
         struct VkDescriptorBufferInfo bufferInfo = {
-                .buffer = renderer->UBO.buffer,
+                .buffer = theBufferInQuestion->buffer,
                 .offset = 0,
-                .range = VK_WHOLE_SIZE
+                .range = dataSize
         };
 
         struct VkWriteDescriptorSet writeSet = {
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .pNext = nullptr,
+                // yeesh
                 .dstSet = renderer->UBODescriptorSet,
                 .dstBinding = 0,
                 .dstArrayElement = 0,
@@ -357,6 +295,63 @@ void rtER_bufferUniformData(struct rtERenderer* renderer, size_t size, mat4 mode
                         0,
                         nullptr);
 
+}
+
+void rtER_bindVertexBuffer(struct rtERenderer* renderer, rter_vbo_t vbo) {
+        // Resize bound vertex buffers array to permit adding new vbo
+        renderer->boundVertexBuffers = realloc(
+                        renderer->boundVertexBuffers,
+                        sizeof(VkBuffer) * (renderer->boundVertexBuffersCount+ 1)
+                        );
+
+        // Get the raw buffer and add it to the bound vertex buffers array
+        renderer->boundVertexBuffers[renderer->boundVertexBuffersCount] = renderer->vertexBuffers[*vbo].buffer;
+        // Track this addition
+        renderer->boundVertexBuffersCount++;
+}
+
+void rtER_unbindVertexBuffer(struct rtERenderer* renderer, rter_vbo_t vbo) {
+        // When loading vertex data, the buffer is destroyed and remade with a new size.
+        // This obviously will make bound buffer handles stale and invalid, so currently
+        // buffers must be unbound before buffering vertex data
+
+        // Find and the buffer being unbound and shift other members downward
+
+        bool foundBuffer = false;
+
+        VkBuffer bufferBeingRemoved = renderer->vertexBuffers[*vbo].buffer;
+        for (size_t i = 0; i < renderer->boundVertexBuffersCount; i++) {
+                // Skip if not the correct buffer
+                if (renderer->boundVertexBuffers[i] != bufferBeingRemoved) {
+                        continue;
+                }
+
+                // Shift everything down one
+                for (size_t j = i; j < renderer->boundVertexBuffersCount - 1; j++) {
+                        renderer->boundVertexBuffers[j] = renderer->boundVertexBuffers[j + 1]; 
+                }
+
+                // Indicate that the buffer was found and the shifts have been made
+                foundBuffer = true;
+                break;
+        }
+
+        // Return without reallocating if buffer not found; bound buffer array unchanged
+        if (!foundBuffer) {
+                return;
+        }
+        
+        renderer->boundVertexBuffersCount--;
+
+        // Realloc has UB when size is zero. Array will not be resized if last vbo is removed
+        if (renderer->boundVertexBuffersCount == 0) {
+                return;
+        }
+
+        renderer->boundVertexBuffers = realloc(
+                        renderer->boundVertexBuffers,
+                        sizeof(VkBuffer) * (renderer->boundVertexBuffersCount)
+                        );
 }
 
 void rtER_drawFrame(struct rtERenderer* renderer) {
@@ -432,18 +427,24 @@ void rtER_drawFrame(struct rtERenderer* renderer) {
                 nullptr);
 
         vkCmdBindPipeline(renderer->commandBuffer[renderer->currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->graphicsPipeline);
-        
-        VkDeviceSize offset = 0;
-        vkCmdBindVertexBuffers(
-                renderer->commandBuffer[renderer->currentFrame],
-                0,
-                1,
-                &renderer->vertexBuffer.buffer,
-                &offset
-        );
 
-        vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], renderer->vertexBuffer.bufferSize / sizeof(struct vertex), 1, 0, 0); // Remember - this  needs to know the # of vertices to draw
+        // Only draw if there is something to draw
+        // Prevents crashing
+        if (renderer->boundVertexBuffersCount > 0) {
+                VkDeviceSize offset = 0;
 
+                vkCmdBindVertexBuffers(
+                        renderer->commandBuffer[renderer->currentFrame],
+                        0,
+                        // Specifies # vertex input bindings that are updated. MEANING: There must be a binding for each vertex buffer. 
+                        // uh oh!!
+                        renderer->boundVertexBuffersCount, 
+                        renderer->boundVertexBuffers,
+                        &offset
+                );
+                // Remember - this  needs to know the # of vertices to draw
+                vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], 8 * 16 * 8 * 36, 1, 0, 0); 
+        }
         vkCmdEndRenderPass(renderer->commandBuffer[renderer->currentFrame]);
 
         vkEndCommandBuffer(renderer->commandBuffer[renderer->currentFrame]);

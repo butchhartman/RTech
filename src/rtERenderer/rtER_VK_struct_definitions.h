@@ -58,10 +58,19 @@ struct rtERenderer {
         VkSemaphore imageAvaiableSemaphore[MAX_CONCURRENT_FRAMES];
         VkSemaphore renderingFinishedSemaphores[2]; // needs to be swapchain image count to have a semaphore fore each image. Hardcoded to 2 but could be less.
         size_t currentFrame;
-        struct rtER_VK_Buffer vertexBuffer;
         VkDescriptorSetLayout UBODescriptorSetLayout;
         VkDescriptorPool UBODescriptorPool;
         VkDescriptorSet UBODescriptorSet;
-        struct rtER_VK_Buffer UBO;
+
+        uint32_t uniformBufferCount;
+        uint32_t vertexBufferCount;
+
+        struct rtER_VK_Buffer* uniformBuffers;
+        struct rtER_VK_Buffer* vertexBuffers;
+
+        // Size of AND number of bound vBuffers
+        uint32_t boundVertexBuffersCount;
+        VkBuffer* boundVertexBuffers;
 };
+
 #endif // RTER_VK_STRUCT_DEFINITIONS
