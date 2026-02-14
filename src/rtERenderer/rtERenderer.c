@@ -200,8 +200,10 @@ void rtER_bufferVertexData(struct rtERenderer* renderer, rter_vbo_t vbo, void* d
 
         if (theBufferInQuestion->bufferSize < dataSize) {
                 // destroy current buffer and create new sufficiently sized buffer
+                rtELog_debug_logInfo("Recreating VBO ID#%d. Old size: %d, New size: %d", *vbo, theBufferInQuestion->bufferSize, dataSize);
                 recreateBuffer(renderer, theBufferInQuestion, dataSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
         }
+        // Recreated buffer is being used below since the address of the buffer has been taken previously
         // buffer data to buffer
         rtER_VK_bufferData(
                 data,
