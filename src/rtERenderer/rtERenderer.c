@@ -442,8 +442,15 @@ void rtER_drawFrame(struct rtERenderer* renderer) {
                         renderer->boundVertexBuffers,
                         &offset
                 );
+
+                // TODO: This shoul probably just be kept track of internally by the renderer so this loop isnt needed in this performance critical section lol
+                size_t vboDataSizes = 0 ;
+                for (size_t i = 0; i < renderer->vertexBufferCount; i++) {
+                        vboDataSizes += renderer->vertexBuffers[i].bufferSize;
+                }
+
                 // Remember - this  needs to know the # of vertices to draw
-                vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], 8 * 16 * 8 * 36, 1, 0, 0); 
+                vkCmdDraw(renderer->commandBuffer[renderer->currentFrame], vboDataSizes / sizeof(struct vertex), 1, 0, 0); 
         }
         vkCmdEndRenderPass(renderer->commandBuffer[renderer->currentFrame]);
 
