@@ -16,6 +16,16 @@ static void handleInput(struct inputEvent event) {
         rtGame_cameraHandleInput(gameCamera, event);
 }
 
+/*
+ * The main entry point
+ *
+ * Main's control flow is as follows:
+ *      - Do all necessary things for engine initialization (window, renderer, etc)
+ *      - Once engine is initialized, run the game initialization routine
+ *      - Then, the engine will run the game update routine in its main loop
+ *      - Once main loop exited, call game cleanup rountine
+ *      - Cleanup engine
+ */
 int main() {
         rtELog_init("RTechLog");
 
@@ -89,5 +99,5 @@ int main() {
         rtEW_cleanupWindow(&window);
         rtEW_cleanup();
         rtELog_cleanup();
-        return 0;
+        return EXIT_SUCCESS;
 }
