@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "game/gameClasses/camera.h"
+#include "game/gameClasses/camera/camera.h"
 #include "game/renderObjects/chunk.h"
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtELog/rtELog.h" 

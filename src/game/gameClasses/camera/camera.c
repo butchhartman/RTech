@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "game/gameClasses/camera.h"
+#include "game/gameClasses/camera/camera.h"
 #include "rtEMath/rtEMath.h"
 
 struct rtGame_camera {
