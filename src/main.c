@@ -2,6 +2,7 @@
 #include <time.h>
 
 #include "game/gameClasses/camera/camera.h"
+#include "game/gameClasses/chunkManager/chunkManager.h"
 #include "game/renderObjects/chunk.h"
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtELog/rtELog.h" 
@@ -61,14 +62,19 @@ int main() {
                                 0.25
                         );
 
-        struct chunk* myChunk = rtGame_createChunk();
+        vec3 chunkPosition = {0, 0, -1};
+        struct chunk myChunk = rtGame_createChunk(chunkPosition);
 
-        rtGame_chunkCreateMesh(myChunk);
-
+        rtGame_chunkCreateMesh(&myChunk);
+/*
         rter_vbo_t vbo = nullptr;
         rtER_createVertexBuffer(renderer, &vbo);
-        rtER_bufferVertexData(renderer, vbo, (void*)rtGame_chunkGetMeshPtr(myChunk), sizeof(struct vertex) * 36 * rtGame_chunkGetMeshSize(myChunk));
+        rtER_bufferVertexData(renderer, vbo, (void*)rtGame_chunkGetMeshPtr(&myChunk), sizeof(struct vertex) * 36 * rtGame_chunkGetMeshSize(&myChunk));
         rtER_bindVertexBuffer(renderer, vbo);
+        */
+
+        struct rtGame_chunkManager* chunkManager = rtGame_createChunkManager(3, gameCamera, renderer);
+        rtGame_chunkManagerUpdate(chunkManager);
 
         rter_ubo_t ubo = nullptr;
         rtER_createUniformBuffer(renderer, &ubo);
@@ -80,6 +86,7 @@ int main() {
         rtELog_log("Beginning main loop");
 
         rtEW_showWindow(window);  
+
 
         while(!rtEW_windowShouldClose(window)) {
 
@@ -99,5 +106,6 @@ int main() {
         rtEW_cleanupWindow(&window);
         rtEW_cleanup();
         rtELog_cleanup();
+
         return EXIT_SUCCESS;
 }
