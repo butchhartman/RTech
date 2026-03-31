@@ -1,8 +1,6 @@
 #include "rtERenderer/rtERenderer.h"
 #include "rtEMath/rtEMath.h"
-#include "rtERenderer/creation/rtER_VK_infoCreation.h"
 #include "rtERenderer/creation/rtER_VK_objectCreation.h"
-#include "rtERenderer/debug/debugCallback.h"
 #include "rtERenderer/macros/rtERendererVKMacros.h"
 #include "rtEErrorCodes/rtEErrorCodes.h"
 #include "rtELog/rtELog.h"
@@ -33,8 +31,7 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
         // TODO: Remove needing to put every relevant member in individually and just send through the whole renderer struct
 
         rtER_VK_createVKInstance(
-                &renderer->instance, 
-                &renderer->apiVersion, 
+                renderer,
                 rtER_VK_requiredInstanceExtensions, 
                 ARRAY_SIZE(rtER_VK_requiredInstanceExtensions), 
                 rtER_VK_requiredValidationLayers, 
@@ -42,21 +39,10 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                 );
 
         rtER_VK_createDebugMessenger(
-                &renderer->debugMessenger, 
-                renderer->instance,
-                rtER_VK_getDebugMessengerCreateInfo(
-                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-                        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
-                        VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-
-                        rtER_debug_debugCallback
-                        )
+                renderer
                 );
 
+        // this is a rtEW function, it makes sense to not give the windowing library access to the renderer definition.
         rtEW_VK_createSurface(
                 &renderer->surface, 
                 renderer->instance, 
@@ -64,18 +50,14 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
                 );
 
         rtER_VK_getSuitablePhysicalDevice(
-                &renderer->physDevice,
-                renderer->instance,
-                renderer->surface,
+                renderer,
                 VK_QUEUE_GRAPHICS_BIT,
                 rtER_VK_requiredDeviceExtensions,
                 ARRAY_SIZE(rtER_VK_requiredDeviceExtensions)
                 );
 
         rtER_VK_createLogicalDevice(
-                &renderer->logicalDevice,
-                renderer->physDevice,
-                &renderer->surface,
+                renderer,
                 VK_QUEUE_GRAPHICS_BIT,
                 rtER_VK_requiredDeviceExtensions,
                 ARRAY_SIZE(rtER_VK_requiredDeviceExtensions),
@@ -83,61 +65,36 @@ enum rtEErrorCode rtER_initializeRenderer(struct rtERenderer** rendererPtr, stru
         );
 
         rtER_VK_createSwapchain(
-        &renderer->swapchain,
-        &renderer->swapchainInfo,
-        renderer->surface,
-        renderer->physDevice,
-        renderer->logicalDevice,
-        &renderer->swapchainImages,
-        &renderer->swapchainImageCount
+                renderer
         );
 
         rtER_VK_createImageViews(
-        &renderer->swapchainImageViews,
-        renderer->swapchainInfo,
-        renderer->swapchainImages,
-        renderer->swapchainImageCount,
-        renderer->logicalDevice
+                renderer
         );
 
         rtER_VK_createRenderpass(
-        &renderer->renderPass,
-        renderer->logicalDevice,
-        renderer->swapchainInfo
+                renderer
         );
 
         rtER_VK_createFramebuffers(
-                &renderer->framebuffers,
-                renderer->logicalDevice,
-                renderer->renderPass,
-                renderer->swapchainImageViews,
-                renderer->swapchainImageCount,
-                renderer->swapchainInfo
+                renderer
         );
 
         rtER_VK_createDescriptorSetLayout(
-                        &renderer->UBODescriptorSetLayout,
-                        renderer->logicalDevice,
-                        0,
-                        1,
-                        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                        VK_SHADER_STAGE_VERTEX_BIT,
-                        nullptr
-                        );
+                renderer,
+                0,
+                1,
+                VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                VK_SHADER_STAGE_VERTEX_BIT,
+                nullptr
+        );
 
         rtER_VK_createGraphicsPipeline(
-                &renderer->graphicsPipeline,
-                &renderer->pipelineLayout,
-                renderer->logicalDevice,
-                renderer->renderPass,
-                renderer->swapchainInfo,
-                renderer->UBODescriptorSetLayout
+                renderer
         );
 
         rtER_VK_createCommandPool(
-                &renderer->commandPool,
-                renderer->logicalDevice,
-                renderer->queueInfo
+                renderer
         );
 
         rtER_VK_createCommandBuffer(

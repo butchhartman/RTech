@@ -1,0 +1,27 @@
+name: test
+run-name: ${{ github.actor }}
+on: [pull_request]
+jobs:
+  test-compilation:
+    runs-on: windows-latest
+    steps:
+        - name: install cmake
+          uses: ssrobins/install-cmake@v1
+          with: 
+            version: 4.1.1
+      
+        - name: Setup python
+          uses: actions/setup-python@v6.2.0
+  
+        - name: Setup Vulkan SDK
+          uses: humbletim/install-vulkan-sdk@30ba978f977e81b72d091fc8888feb1fb26f9aff
+  
+        - name: Checkout PR
+          uses: actions/checkout@v6.0.2
+
+        - name: configure repo
+          working-directory: ${{github.workspace}}/scripts
+          run: py ${{github.workspace}}/scripts/clang_withtests.py
+          
+        - name: build repo
+          run: cmake --build ${{github.workspace}}/build --config Debug
