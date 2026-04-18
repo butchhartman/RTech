@@ -1,3 +1,2 @@
-target_sources(${PROJECT_NAME} PRIVATE
-        camera.c)
-
+add_subdirectory(camera)
+add_subdirectory(chunkManager)

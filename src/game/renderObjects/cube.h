@@ -2,6 +2,9 @@
 #define GAME_CUBE_H_
 #include "game/renderObjects/vertex.h"
 
+#define CUBE_VERTEX_COUNT (sizeof(cubeVertices) / sizeof(struct vertex))
+#define CUBE_VERTEX_BYTES (sizeof(cubeVertices))
+
 static const struct vertex cubeVertices[36] = {
         // position        UV         color
         // Front face

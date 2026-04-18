@@ -13,6 +13,7 @@
 #define RTEMATH_MAT4_SIZE sizeof(float) * 16
 
 #include <math.h>
+
 typedef float vec3[3];
 typedef float mat4[16];
 
