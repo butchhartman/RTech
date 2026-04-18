@@ -440,12 +440,14 @@ void rtER_drawFrame(struct rtERenderer* renderer) {
         if (renderer->boundVertexBuffersCount > 0) {
                 VkDeviceSize offset = 0;
 
+                        // Specifies # vertex input bindings that are updated. MEANING: There must be a binding for each vertex buffer. 
+                        // uh oh!!
+                        // I'm dumb. A max VBO count would be stupid. All that error meant is that there can only be a certain amount of vertex input binding descriptions.
+                        // See https://docs.vulkan.org/refpages/latest/refpages/source/vkCmdBindVertexBuffers.html
                 vkCmdBindVertexBuffers(
                         renderer->commandBuffer[renderer->currentFrame],
                         0,
-                        // Specifies # vertex input bindings that are updated. MEANING: There must be a binding for each vertex buffer. 
-                        // uh oh!!
-                        renderer->boundVertexBuffersCount, 
+                        1, 
                         renderer->boundVertexBuffers,
                         &offset
                 );
